@@ -14,17 +14,17 @@ using namespace Rcpp;
 
 
 //-------------------------------------------------------------
-// NEW: FUNCTION: 	Squared Exponential Covariance Function
-//			   for two time vectors (x,y).
-//-------------------------------------------------------------
-// INPUTS:	   x,y   = two vectors from the same space.
-//				ls    = b 		= length (of period)
-//				var   = tau1.sq = variance of function
-//-------------------------------------------------------------
-// OUTPUT:	The squared exponential covariance matrix.
+// FUNCTION: 	Squared Exponential Covariance Function for two time vectors (x,y).
 //-------------------------------------------------------------
 mat cov_se(vec t1, vec t2, double ls, double var)
 {
+   //-------------------------------------------------------------
+   // INPUTS:	   x,y   = two vectors from the same space.
+   //				ls    = b 		= length (of period)
+   //				var   = tau1.sq = variance of function
+   //-------------------------------------------------------------
+   // OUTPUT:	The squared exponential covariance matrix.
+   //-------------------------------------------------------------
    double arg;
    int n1 = t1.size();
    int n2 = t2.size();
@@ -43,8 +43,7 @@ mat cov_se(vec t1, vec t2, double ls, double var)
 }
 
 //-------------------------------------------------------------
-// FUNCTION: Utility function for calculating posterior
-//           MVN params for N(Phi^(-1)*m, Phi^(-1))
+// FUNCTION: Utility function for calculating posterior MVN params for N(Phi^(-1)*m, Phi^(-1))
 //-------------------------------------------------------------
 List mvn_post_util(double sigma, vec mu0, mat Prec0, vec n_vec, vec sy_vec){
 
@@ -65,14 +64,14 @@ List mvn_post_util(double sigma, vec mu0, mat Prec0, vec n_vec, vec sy_vec){
 //-------------------------------------------------------------
 // FUNCTION: 	Generates realizations from multivariate normal.
 //-------------------------------------------------------------
-// INPUTS:	   n = sample size
-//				   mu = vector of means
-//				   sigma = covariance matrix
-//-------------------------------------------------------------
-// OUTPUT:	n realizations of the specified MVN.
-//-------------------------------------------------------------
 mat rmvnormArma(int n, vec mu, mat sigma) {
-
+   //-------------------------------------------------------------
+   // INPUTS:	   n = sample size
+   //				   mu = vector of means
+   //				   sigma = covariance matrix
+   //-------------------------------------------------------------
+   // OUTPUT:	n realizations of the specified MVN.
+   //-------------------------------------------------------------
    int ncols = sigma.n_cols;
    mat Y = randn(n, ncols);
    mat result = (repmat(mu, 1, n).t() + Y * chol(sigma)).t();
@@ -80,7 +79,7 @@ mat rmvnormArma(int n, vec mu, mat sigma) {
 }
 
 //-------------------------------------------------------------------------------
-// NEW: log of the integrated likelihood for time series, for a given tree/leaf.
+// FUNCTION: log of the integrated likelihood for tsb, for a given tree/leaf.
 //-------------------------------------------------------------------------------
 double lil_ts(vec nt, vec sy_vec, double sy2, double sigma, vec mu0, mat Prec0){
    // nt = vector of number of obs in each time point for the given tree/leaf. nt = [nl_{t=1}, ..., nl_{t=T}]
@@ -104,11 +103,9 @@ double lil_ts(vec nt, vec sy_vec, double sy2, double sigma, vec mu0, mat Prec0){
    return(ll);
 }
 
-
 //-------------------------------------------------------------------------------
-// NEW: Time Series: get sufficients stats for all bottom nodes
+// FUNCTION: tsb: get sufficients stats for all bottom nodes
 //-------------------------------------------------------------------------------
-
 void allsuff_ts(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv, std::vector<sinfo>& sv)
 {
    // Bottom nodes are written to bnv.
@@ -145,8 +142,6 @@ void allsuff_ts(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv, std::vector<sinfo
    // Loop through each observation.  Push each obs x down the tree and find its bottom node,
    // then index into the suff stat for the bottom node corresponding to that obs.
 
-//   Rcout << "allsuff_ts, made it to vector loop" << endl;
-
    for(size_t i=0;i<di.n;i++) {
       xx = di.x + i*di.p;  //Index value: di.x is pointer to first element of n*p data vector.  Iterates through each element.
       y=di.y[i];           // Resolves to r.
@@ -169,16 +164,11 @@ void allsuff_ts(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv, std::vector<sinfo
 //      Rcout << "Node " << ni << ", time " << id << endl;
 //      Rcout << "n_vec" << endl << sv[ni].n_vec;
 //      Rcout << "sy_vec" << endl << sv[ni].sy_vec;
-
    } // End obs loop.
-
-//   Rcout << "Finished n_vec and sy_vec calculations" << endl;
-
 }
 
 //-------------------------------------------------------------------------------
-// NEW: Time Series: get sufficient stats for children of node nx in tree x
-// (for birth proposal)
+// FUNCTION: tsb: get sufficient stats for children of node nx in tree x (for birth proposal)
 //-------------------------------------------------------------------------------
 void getsuff_ts(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr, size_t tlen)
 {
@@ -225,8 +215,7 @@ void getsuff_ts(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo&
 }
 
 //--------------------------------------------------
-//get sufficient stats for pair of bottom children nl(left) and nr(right) in tree x
-// (for death proposal)
+// FUNCTION: get sufficient stats for pair of bottom children nl(left) and nr(right) in tree x (for death proposal)
 //--------------------------------------------------
 
 void getsuff_ts(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr, size_t tlen)
@@ -615,50 +604,6 @@ void getsuff(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, 
 	}
 }
 
-
-//--------------------------------------------------
-//log of the integrated likelihood
-double lil(double n, double sy, double sy2, double sigma, double tau)
-{
-	double yb,yb2,S,sig2,d;
-	double sum, rv;
-
-	yb = sy/n;
-	yb2 = yb*yb;
-	S = sy2 - (n*yb2);
-	sig2 = sigma*sigma;
-	d = n*tau*tau + sig2;
-	sum = S/sig2 + (n*yb2)/d;
-	rv = -(n*LTPI/2.0) - (n-1)*log(sigma) -log(d)/2.0;
-	rv = rv -sum/2.0;
-	return rv;
-}
-
-double lilhet(double n, double sy, double sy2, double sigma, double tau)
-{
-  double d = 1/(tau*tau) + n;// n is \sum phi_i for het
-
-  double out = -log(tau) - 0.5*log(d);
-  out += 0.5*sy*sy/d - 0.5*sy2;
-  return out;
-}
-
-double lilprec(double n, double sy, double sy2, double sigma, double tau)
-{
-  double LN2 = 0.693147180559945309417232121458;
-  //gamma prior
-  //double rv = tau*log(tau) - (n*LTPI/2.0) - lgamma(tau);
-  //rv += lgamma(tau + 0.5*n) - (tau+0.5*n)*log(tau + 0.5*sy2);
-
-  //mixture prior
-  double rv = tau*log(tau) - (n*LTPI/2.0) - lgamma(tau) - LN2;
-  double loga = lgamma(tau + 0.5*n) - (tau+0.5*n)*log(tau + 0.5*sy2); //nc for gamma
-  double logb = gig_norm(0.5*n-tau, 2.0*tau, sy2);
-  rv += logsumexp(loga, logb);
-	return rv;
-}
-
-
 //--------------------------------------------------
 //fit for multiple data points, not by reference.
 void fit(tree& t, xinfo& xi, dinfo& di, vec& fv)
@@ -710,9 +655,9 @@ void partition(tree& t, xinfo& xi, dinfo& di, std::vector<size_t>& pv)
 		pv[i] = bn->nid();
 	}
 }
+
 //--------------------------------------------------
 // draw all the bottom node mu's
-
 void drmu(tree& t, xinfo& xi, dinfo& di, pinfo& pi, RNG& gen)
 {
 	tree::npv bnv;
@@ -759,7 +704,6 @@ void drmu(tree& t, xinfo& xi, dinfo& di, pinfo& pi, RNG& gen)
 	}
 }
 
-
 //--------------------------------------------------
 //write cutpoint information to screen
 void prxi(xinfo& xi)
@@ -797,6 +741,7 @@ void makexinfo(size_t p, size_t n, double *x, xinfo& xi, size_t nc)
 		for(size_t j=0;j<nc;j++) xi[i][j] = minx[i] + (j+1)*xinc;
 	}
 }
+
 // get min/max needed to make cutpoints
 void makeminmax(size_t p, size_t n, double *x, std::vector<double> &minx, std::vector<double> &maxx)
 {
@@ -810,6 +755,7 @@ void makeminmax(size_t p, size_t n, double *x, std::vector<double> &minx, std::v
 		}
 	}
 }
+
 //make xinfo = cutpoints give the minx and maxx vectors
 void makexinfominmax(size_t p, xinfo& xi, size_t nc, std::vector<double> &minx, std::vector<double> &maxx)
 {
@@ -823,7 +769,7 @@ void makexinfominmax(size_t p, xinfo& xi, size_t nc, std::vector<double> &minx, 
 	}
 }
 
-// Check if a vector is sorted.  For checking z and zpred for causal funbart.
+// Check if a vector is sorted.  For checking z and zpred for tsbcf.
 bool is_sort(arma::vec x) {
      int n=x.n_elem;
      for (int i=0; i<n-1; ++i)
@@ -831,3 +777,44 @@ bool is_sort(arma::vec x) {
      return true;
 }
 
+// //--------------------------------------------------
+// //log of the integrated likelihood
+// double lil(double n, double sy, double sy2, double sigma, double tau)
+// {
+//    double yb,yb2,S,sig2,d;
+//    double sum, rv;
+//
+//    yb = sy/n;
+//    yb2 = yb*yb;
+//    S = sy2 - (n*yb2);
+//    sig2 = sigma*sigma;
+//    d = n*tau*tau + sig2;
+//    sum = S/sig2 + (n*yb2)/d;
+//    rv = -(n*LTPI/2.0) - (n-1)*log(sigma) -log(d)/2.0;
+//    rv = rv -sum/2.0;
+//    return rv;
+// }
+//
+// double lilhet(double n, double sy, double sy2, double sigma, double tau)
+// {
+//    double d = 1/(tau*tau) + n;// n is \sum phi_i for het
+//
+//    double out = -log(tau) - 0.5*log(d);
+//    out += 0.5*sy*sy/d - 0.5*sy2;
+//    return out;
+// }
+//
+// double lilprec(double n, double sy, double sy2, double sigma, double tau)
+// {
+//    double LN2 = 0.693147180559945309417232121458;
+//    //gamma prior
+//    //double rv = tau*log(tau) - (n*LTPI/2.0) - lgamma(tau);
+//    //rv += lgamma(tau + 0.5*n) - (tau+0.5*n)*log(tau + 0.5*sy2);
+//
+//    //mixture prior
+//    double rv = tau*log(tau) - (n*LTPI/2.0) - lgamma(tau) - LN2;
+//    double loga = lgamma(tau + 0.5*n) - (tau+0.5*n)*log(tau + 0.5*sy2); //nc for gamma
+//    double logb = gig_norm(0.5*n-tau, 2.0*tau, sy2);
+//    rv += logsumexp(loga, logb);
+//    return rv;
+// }

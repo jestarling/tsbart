@@ -123,13 +123,6 @@ void getsuff(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, 
 void getsuffhet(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, double* phi, sinfo& sl, sinfo& sr);
 
 //--------------------------------------------------
-//log of the integreted likelihood
-double lil(double n, double sy, double sy2, double sigma, double tau);
-//lilhet drops constants that cancel in the mh ratio, lil/lilprec don't (legacy)
-double lilhet(double n, double sy, double sy2, double sigma, double tau);
-//sy isn't needed, but convenient to maintain fcn sig
-double lilprec(double n, double sy, double sy2, double sigma, double tau);
-//--------------------------------------------------
 //fit
 void fit(tree& t, xinfo& xi, dinfo& di, std::vector<double>& fv);
 //--------------------------------------------------
@@ -204,5 +197,13 @@ void makexinfominmax(size_t p, xinfo& xi, size_t nc, std::vector<double> &minx, 
 //--------------------------------------------------
 // Check if a vector is sorted.  For checking z and zpred for causal funbart.
 bool is_sort(arma::vec x);
+
+// //--------------------------------------------------
+// //log of the integreted likelihood
+// double lil(double n, double sy, double sy2, double sigma, double tau);
+// //lilhet drops constants that cancel in the mh ratio, lil/lilprec don't (legacy)
+// double lilhet(double n, double sy, double sy2, double sigma, double tau);
+// //sy isn't needed, but convenient to maintain fcn sig
+// double lilprec(double n, double sy, double sy2, double sigma, double tau);
 
 #endif
