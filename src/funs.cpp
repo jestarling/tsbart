@@ -99,7 +99,7 @@ double lil_ts(vec nt, vec sy_vec, double sy2, double sigma, vec mu0, mat Prec0){
    A.diag() = A.diag() + nt/sig2;
 
    // Calculate log-likelihood.  Note: mu0.t()*K*mu0 excluded as cancels in ratios.
-   double ll = -.5*nl*log(2*PI*sig2) + .5*log(det(2*PI*A)) - .5*as_scalar(sy2/sig2 - b.t()*A.i()*b);
+   double ll = -.5*nl*log(2*PI*sig2) - .5*log(det(2*PI*A)) - .5*as_scalar(sy2/sig2 - b.t()*A.i()*b);
    return(ll);
 }
 
