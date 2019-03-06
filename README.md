@@ -1,11 +1,7 @@
 # tsbart R Package
 
 ## About
-Implements the BART with Targeted Smoothing method (tsBART) detailed in Starling et al. (2018).  Also implements the Targeted Smooth Bayesian Causal Forest method (tsbcf) detailed in Starling et al. (2019).
-
-BART with Targeted Smoothing, or tsBART, is an extension of the original BART model which induces smoothness over a single targeted covariate. 
-
-Targeted Smooth BCF (tsbcf) is an extension of Bayesian Causal Forests and tsBART, which allows for heterogeneous treatment effects which vary smoothly across a target covariate.
+Implements the BART with Targeted Smoothing method (tsBART) detailed in Starling et al. (2018).  BART with Targeted Smoothing, or tsBART, is an extension of the original BART model which induces smoothness over a single targeted covariate. 
 
 ## Documentation
 
