@@ -112,18 +112,19 @@ class sinfo
 {
 public:
 
-   double n0; //unweighted sample counts
+   double n0; //unweighted sample counts for het case.
    double n;
    double sy;
    double sy2;
+   vec n0_vec; // unweighted sample counts for het case at each t.
    vec n_vec;
    vec sy_vec;
 
    // Original constructor; no time series length argument.
-   sinfo() {n0=0.0;n=0;sy=0.0;sy2=0.0; n_vec = zeros(1); sy_vec = zeros(1);}
+   sinfo() {n0=0.0;n=0;sy=0.0;sy2=0.0; n0_vec = zeros(1); n_vec = zeros(1); sy_vec = zeros(1);}
 
    // New constructor, with time series length argument.
-   sinfo(size_t tlen) {n0=0.0;n=0;sy=0.0;sy2=0.0; n_vec = zeros(tlen); sy_vec = zeros(tlen);}
+   sinfo(size_t tlen) {n0=0.0;n=0;sy=0.0;sy2=0.0; n0_vec = zeros(tlen); n_vec = zeros(tlen); sy_vec = zeros(tlen);}
 
 };
 

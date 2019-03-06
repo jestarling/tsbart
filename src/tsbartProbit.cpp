@@ -17,14 +17,14 @@ using namespace Rcpp;
 using namespace arma;
 
 // [[Rcpp::export]]
-List tsbartProbit(arma::vec y,         // True latent variable values of the response.
+List tsbartProbit(arma::vec y,      // True latent variable values of the response.
                   arma::vec yobs,    // Vector of observed y values; 1 and 0.
                   arma::vec tgt,
                   arma::vec tpred,
                   arma::vec x,
                   arma::vec xpred,
                   List xinfo_list,
-                  int nburn, int nsim, double offset,
+                  int nburn, int nsim, double offset=0,
                   int ntree = 200, double ecross=1,
                   double base_tree=.95, double power_tree=2.0,
                   double con_sd = 1,
@@ -288,6 +288,9 @@ List tsbartProbit(arma::vec y,         // True latent variable values of the res
    NumericMatrix sfit(nsim,n);
    NumericMatrix spred(nsim,dip.n);
 
+   // For holding MH alphas for trees.
+   NumericMatrix alpha (nsim+nburn,ntree);
+
    int thin = 1;
 
    //--------------------------------------------------
@@ -330,7 +333,7 @@ List tsbartProbit(arma::vec y,         // True latent variable values of the res
          }
 
          //birth/death
-         bd(t[j],xi,di,pi,gen);
+         alpha(i,j) = bd(t[j],xi,di,pi,gen);
 
          // draw mu's
          drmu(t[j],xi,di,pi,gen);
@@ -528,9 +531,6 @@ List tsbartProbit(arma::vec y,         // True latent variable values of the res
                        _["sigma"]         = 1,           // sigma=1 in probit case.
                        _["eta"]           = seta,        // Vector of eta MCMC draws.
                        _["gamma"]         = sgamma,      // Vector of gamma MCMC draws.
-//                       _["postpred"]      = pp,          // Matrix of posterior predictive draws for in-sample.
-//                       _["postpred_oos"]  = pp_pred,       // Matrix of posterior predictive draws for out-of-sample.
-                       _["alpha_ti"]   = alpha_ti,  // Matrix of posterior predictive draws for out-of-sample.
-                       _["alpha_ti_oos"]   = alpha_ti_pred   // Matrix of posterior predictive draws for out-of-sample.
+                       _["alpha"]         = alpha        // matrix of MH alpha's for trees
    ));
 }

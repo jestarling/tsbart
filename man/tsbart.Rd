@@ -6,22 +6,22 @@ tsbart(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200,
                    lambda=NULL, sigq=.9, sighat=NULL, nu=3,
                    ecross=1, base_tree=.95, power_tree=2,
                    sd_control=sd(y), use_fscale=TRUE,
-                   probit=FALSE, yobs=NULL, verbose=T)
+                   probit=FALSE, yobs=NULL, verbose=T, mh=F, save_inputs=T)
 }
 \arguments{
 \item{y}{Length n vector with continuous response values.  In probit case, should contain initializations for latent variables.}
 
 \item{tgt}{Length n targeted covariate over which to smooth.}
 
-\item{tpred}{Length npred out-of-sample targeted covariate.}
-
 \item{x}{A (n x p) data frame or matrix containing the covariates which are not to be smoothed over.}
 
-\item{xpred}{A (npred x p) data frame or matrix containing out of sample covariates.}
+\item{tpred}{Length npred out-of-sample targeted covariate.  Optional.}
 
-\item{nburn}{Number of burn-in MCMC iterations.}
+\item{xpred}{A (npred x p) data frame or matrix containing out of sample covariates. Optional.}
 
-\item{nsim}{Number of MCMC iterations to save after burn-in.}
+\item{nburn}{Number of burn-in MCMC iterations. Defaults to 100.}
+
+\item{nsim}{Number of MCMC iterations to save after burn-in. Defaults to 1000.}
 
 \item{ntree}{Number of trees. Defaults to 200.}
 
@@ -48,23 +48,38 @@ tsbart(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200,
 \item{yobs}{Length n vector of binary responses; only populated for probit=1 case.}
 
 \item{verbose}{Boolean for writing progress report to console.}
+
+\item{mh}{Boolean for including Metropolis acceptance detail in output.  Defaults to FALSE.  If true, output includes the metrop dataframe.}
+
+\item{save_inputs}{Boolean for saving user inputs.  If true, output includes the inputs dataframe.}
+
 }
 \value{
 A list containing the following items:
 
 \item{mcmcdraws}{A (nsim x n) matrix containing the in-sample MCMC draws for the tsbart fit.}
 
-\item{mcmcdraws_oos}{A (nsim x npred) matrix containing the out-of-sample MCMC draws for the tsbart fit.}
+\item{mcmcdraws_oos}{A (nsim x npred) matrix containing the out-of-sample MCMC draws for the tsbart fit, if predicting for out of sample data.}
 
 \item{sigma}{A vector containing the MCMC draws for sigma.}
 
-\item{eta}{A vector containing the MCMC draws for eta .}
+\item{treefit_sd}{A vector containing draws for the standard deviation of the BART fit f(x,t), equal to sd_control * eta.}
+
+\item{eta}{A vector containing the MCMC draws for eta.}
 
 \item{gamma}{A vector containing the MCMC draws for gamma.}
 
-\item{postpred}{A (nsim x n) matrix of posterior predictive draws for in-sample data.}
+\item{ecross}{The expected number of crossings.}
 
-\item{postpred_oos}{A (nsim x npred) matrix of posterior predictive draws for out-of-sample data.}
+\item{metrop}{A ((nburn + nsim)*ntree x 5) dataframe of tree proposal details.  Included if mh=TRUE.  Columns are:
+    iter (MCMC iteration number, from 1 to nburn+nsim),
+    tree (tree number, from 1 to ntree),
+    accept (1=0 accepted, 0=rejected),
+    alpha (the Metropolis Hasting alpha for the proposed move), and
+    bd ('birth' or 'death', indicating type of tree proposal).)}
+
+\item{inputs}{A dataframe with key function inputs saved.  Excludes data elements.}
+
 }
 \description{
 This function implements the tsbart method for a continuous or binary responses, smoothing over the covariate tgt,
@@ -79,7 +94,7 @@ Function call example is as follows.
 fit = tsbart(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200, lambda=NULL, sigq=.9, sighat=NULL,
                nu=3, ecross=1, base_tree=.95, base_tree=.95, power_tree=2,
                sd_control=sd(y), use_fscale=TRUE,
-               probit=F, yobs=NULL, verbose=T)
+               probit=F, yobs=NULL, verbose=T, mh=F, save_inputs=T)
 }}
 \author{
 Jennifer E. Starling

@@ -14,15 +14,63 @@
    return( all( out ) )
 }
 
-tsbart <- function(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200,
+tsbart <- function(y, tgt, x, tpred=0, xpred=matrix(0,0,0),
+                   nburn=100, nsim=1000, ntree=200,
                    lambda=NULL, sigq=.9, sighat=NULL, nu=3,
                    ecross=1, base_tree=.95, power_tree=2, sd_control = 2*sd(y),
                    use_fscale=TRUE,
-                   probit=FALSE, yobs=NULL, verbose=T){
+                   probit=FALSE, yobs=NULL, verbose=T, mh=F, save_inputs=T){
+
+   ################################################################
+   # Capture key arguments.
+   ################################################################
+   inputs = cbind.data.frame(
+      'arg' = c('nburn',
+                'nsim',
+                'ntree',
+                'lambda',
+                'sigq',
+                'sighat',
+                'nu',
+                'ecross',
+                'base_tree',
+                'power_tree',
+                'sd_control',
+                'use_fscale',
+                'probit',
+                'verbose',
+                'mh'),
+      'value' = c(ifelse(is.null(nburn),"NULL",nburn),
+                  ifelse(is.null(nsim),"NULL",nsim),
+                  ifelse(is.null(ntree),"NULL",ntree),
+                  ifelse(is.null(lambda),"NULL",lambda),
+                  ifelse(is.null(sigq),"NULL",sigq),
+                  ifelse(is.null(sighat),"NULL",sighat),
+                  ifelse(is.null(nu),"NULL",nu),
+                  ifelse(is.null(ecross),"NULL",ecross),
+                  ifelse(is.null(base_tree),"NULL",base_tree),
+                  ifelse(is.null(power_tree),"NULL",power_tree),
+                  ifelse(is.null(sd_control),"NULL",sd_control),
+                  ifelse(is.null(use_fscale),"NULL",use_fscale),
+                  ifelse(is.null(probit),"NULL",probit),
+                  ifelse(is.null(verbose),"NULL",verbose),
+                  ifelse(is.null(mh),"NULL",mh))
+   )
 
    ################################################################
    # Validate inputs.
    ################################################################
+
+   #---------------------------------------------------------------
+   # If not predicting, set pred objects to first three obs.
+   # These are not output.
+   #---------------------------------------------------------------
+   predict = 1
+   if( .ident(tpred,0) & .ident(xpred,matrix(0,0,0)) ){
+      predict = 0
+      tpred = tgt[1:min(3,length(tgt))]
+      xpred = x[1:min(3,nrow(x)),,drop=F]
+   }
 
    #---------------------------------------------------------------
    # Data size.
@@ -60,12 +108,14 @@ tsbart <- function(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200,
       }
 
       #Yobs must be only 0/1.  Y must not be only 0/1.
-      if(length(unique(y))<3) warning("y appears to be discrete.  In probit case,
-                                      y should contain initial latent variables, and yobs should contain observed binary values.")
+      if(length(unique(y))>2) warning("In probit case,
+                                      y should contain initial latent variables,
+                                      and yobs should contain observed binary values.")
 
-      if(length(unique(yobs))>2) stop("yobs appears to be discrete.  In probit case,
-                                      y should contain initial latent variables, and yobs should contain observed binary values.")
-      if(is.null(yobs)) stop("yobs must be populated when probit=TRUE, and should contain observed binary values.")
+      if(length(unique(yobs))>2) stop("In probit case,
+                                      y should contain initial latent variables,
+                                      and yobs should contain observed binary values.")
+      if(is.null(yobs)) stop("yobs must be populated when probit=TRUE, and should contain observed binary values of 0/1.")
 
       # Warn user that manually input lambda and sighat values are ignored in probit case.
       if(!is.null(lambda) || !is.null(sighat)) warning("lambda and sighat inputs are ignored in probit case, as prior
@@ -86,7 +136,8 @@ tsbart <- function(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200,
    if(any(is.na(x))) stop("Missing values in x")
    if(any(is.na(xpred))) stop("Missing values in xpred")
 
-   if(length(unique(y))<5) warning("y appears to be discrete")
+   if(length(unique(y))<5 && probit==FALSE) warning("y appears to be discrete")
+         # Ok for probit bc might be initializing 0/1 to two latent values.
 
    if(nburn<0) stop("nburn must be positive")
    if(nsim<0) stop("nsim must be positive")
@@ -127,7 +178,7 @@ tsbart <- function(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200,
    offset=0
 
    if(probit==TRUE){
-      phat = mean(unlist(y))
+      phat = mean(unlist(yobs))
       offset = qnorm(phat)
    }
 
@@ -169,13 +220,63 @@ tsbart <- function(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200,
    }
 
    ################################################################
+   # Adjust alpha's and add accept/reject indicator.
+   # Note: bd function returns:
+   #     alpha in (0,1) for births which are accepted
+   #     -alpha in (-1,0) for deaths which are accepted
+   #     10+alpha for rejected births
+   #     -alpha-10 for rejected deaths.
+   ################################################################
+
+   if(mh){
+      # Con metropolis info.
+      bd = ifelse(out$alpha<=0,0,1)             # 1 = birth, 0 = death
+      accept = ifelse(abs(out$alpha)<10,1,0)   # 1 = accepted, 0 = rejected
+      alpha = ifelse(accept==1, abs(out$alpha), abs(out$alpha)-10)
+
+      # Assemble dataframes and convert bd to character.
+      metrop = cbind.data.frame(
+         'iter' = rep(1:(nburn+nsim), times=ntree),
+         'tree' = rep(1:ntree, each=nburn+nsim),
+         'accept' = as.numeric(accept),
+         'alpha' = as.numeric(alpha),
+         'bd' = as.numeric(bd)
+      )
+
+      metrop$bd = ifelse(metrop$bd==1,'birth','death')
+   }
+
+   ################################################################
    # Format output.
    ################################################################
 
-   return(list('mcmcdraws' = out$mcmcdraws*ysd + ybar,
-               'mcmcdraws_oos' = out$mcmcdraws_oos*ysd + ybar,
-               'sigma' = out$sigma*ysd,
-               'eta' = out$eta,
-               'gamma' = out$gamma,
-               'ecross' = ecross))
+   if(predict){
+      out = list('mcmcdraws' = out$mcmcdraws*ysd + ybar,
+                 'mcmcdraws_oos' = out$mcmcdraws_oos*ysd + ybar,
+                 'sigma' = out$sigma*ysd,
+                 'treefit_sd' =  abs(sd_control * out$eta), # sd of BART fit f(x,t).
+                 'eta' = out$eta,
+                 'gamma' = out$gamma,
+                 'ecross' = ecross)
+   } else{
+      out = list('mcmcdraws' = out$mcmcdraws*ysd + ybar,
+                 'sigma' = out$sigma*ysd,
+                 'treefit_sd' =  abs(sd_control * out$eta), # sd of BART fit f(x,t).
+                 'eta' = out$eta,
+                 'gamma' = out$gamma,
+                 'ecross' = ecross)
+   }
+
+   # Include metropolis info if indicated.
+   if(mh){
+      out$metrop = metrop
+   }
+
+   # Include inputs if indicated.
+   if(save_inputs){
+      out$inputs = inputs
+   }
+
+   # Return output.
+   return(out)
    }

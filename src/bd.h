@@ -7,5 +7,6 @@
 #include "funs.h"
 
 double bd(tree& x, xinfo& xi, dinfo& di, pinfo& pi, RNG& gen);
+double bdhet(tree& x, xinfo& xi, dinfo& di, double* phi, pinfo& pi, RNG& gen);
 
 #endif

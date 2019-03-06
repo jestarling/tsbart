@@ -52,7 +52,7 @@ public:
    friend double bd(tree& x, xinfo& xi, dinfo& di, pinfo& pi, RNG& gen);
    //friend bool bd_rj(tree& x, xinfo& xi, dinfo& di, pinfo& pi, RNG& gen);
    friend bool bdprec(tree& x, xinfo& xi, dinfo& di, pinfo& pi, RNG& gen);
-   friend bool bdhet(tree& x, xinfo& xi, dinfo& di, double* phi, pinfo& pi, RNG& gen);
+   friend double bdhet(tree& x, xinfo& xi, dinfo& di, double* phi, pinfo& pi, RNG& gen);
 #endif
 
    //------------------------------

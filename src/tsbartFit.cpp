@@ -225,7 +225,7 @@ List tsbartFit(arma::vec y,
    pi.ls = tlen / (PI * ecross);
 
    // If use_fscale=false, then var(f(x,t)) = con_sd^2 / m is variance of Cov matrix.
-   // If use_fscale=true, then pi.var = 1/m, and C+ prior is induced with median con_sd via eta.
+   // If use_fscale=true, then pi.var = 1/m, and C+ prior is induced with median con_sd via eta; sd of f(x,t) is con_sd*eta.
    pi.var = 1 / static_cast<double>(ntree);
    if(use_fscale==false) pi.var = pi.var * con_sd * con_sd;
 
@@ -306,6 +306,9 @@ List tsbartFit(arma::vec y,
    NumericMatrix sfit(nsim,n);
    NumericMatrix spred(nsim,dip.n);
 
+   // For holding MH alphas for trees.
+   NumericMatrix alpha (nsim+nburn,ntree);
+
    int thin = 1;
 
    //--------------------------------------------------
@@ -349,7 +352,7 @@ List tsbartFit(arma::vec y,
          }
 
          //birth/death
-         bd(t[j],xi,di,pi,gen);
+         alpha(i,j) = bd(t[j],xi,di,pi,gen);
 
          // draw mu's
          drmu(t[j],xi,di,pi,gen);
@@ -543,13 +546,10 @@ List tsbartFit(arma::vec y,
    }
 
    return(List::create(_["mcmcdraws"]      = sfit,     // Matrix of all mcmc draws for in-sample.  Rows = MCMC iter, cols = obs.
-                       _["mcmcdraws_oos"]  = spred,   // Matrix of mcmc draws for out of sample.
+                       _["mcmcdraws_oos"]  = spred,    // Matrix of mcmc draws for out of sample.
                        _["sigma"]          = ssigma,   // Vector of sigma MCMC draws.
                        _["eta"]            = seta,     // Vector of eta MCMC draws.
                        _["gamma"]          = sgamma,   // Vector of gamma MCMC draws.
-//                       _["postpred"]       = pp,       // Matrix of posterior predictive draws for in-sample.
-//                       _["postpred_oos"]   = pp_pred,   // Matrix of posterior predictive draws for out-of-sample.
-                       _["alpha_ti"]       = alpha_ti,  // Matrix of posterior predictive draws for out-of-sample.
-                       _["alpha_ti_oos"]   = alpha_ti_pred   // Matrix of posterior predictive draws for out-of-sample.
+                       _["alpha"]          = alpha     // matrix of MH alpha's for trees
    ));
 }

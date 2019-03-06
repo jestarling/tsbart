@@ -14,7 +14,7 @@ using namespace Rcpp;
 
 
 //-------------------------------------------------------------
-// FUNCTION: 	Squared Exponential Covariance Function for two time vectors (x,y).
+// Squared Exponential Covariance Function for two time vectors (x,y).
 //-------------------------------------------------------------
 mat cov_se(vec t1, vec t2, double ls, double var)
 {
@@ -43,17 +43,14 @@ mat cov_se(vec t1, vec t2, double ls, double var)
 }
 
 //-------------------------------------------------------------
-// FUNCTION: Utility function for calculating posterior MVN params for N(Phi^(-1)*m, Phi^(-1))
+// Utility function for calculating posterior MVN params for N(Phi^(-1)*m, Phi^(-1))
 //-------------------------------------------------------------
 List mvn_post_util(double sigma, vec mu0, mat Prec0, vec n_vec, vec sy_vec){
 
    // Initialize matrices and vectors.
-   mat Lam;
-   vec m;
    double s2 = sigma * sigma;
-
-   Lam = diagmat(n_vec) / s2;
-   m = (1/s2) * sy_vec + Prec0 * mu0;  // K = Prec0
+   mat Lam = diagmat(n_vec) / s2;
+   vec m = (1/s2) * sy_vec + Prec0 * mu0;  // K = Prec0
 
    return List::create(
       _["Phi"] = Prec0 + Lam,
@@ -61,8 +58,23 @@ List mvn_post_util(double sigma, vec mu0, mat Prec0, vec n_vec, vec sy_vec){
    ) ;
 }
 
+List mvn_post_util_het(vec mu0, mat Prec0, vec n0_vec, vec n_vec, vec sy_vec){
+   //n0_vec for het is vector of nt for each time (not weighted).
+   //n_vec for het is vector of sum(w_i) precisions at each time.
+   //sy_vec for het is vector of sum(y_i*w_i) at each time.
+
+   // Initialize matrices and vectors.
+   mat Lam = diagmat(n_vec) + Prec0;
+   vec m = sy_vec + Prec0 * mu0;
+
+   return List::create(
+      _["Phi"] = Lam,
+      _["m"]   = m
+   ) ;
+}
+
 //-------------------------------------------------------------
-// FUNCTION: 	Generates realizations from multivariate normal.
+// Generates realizations from multivariate normal.
 //-------------------------------------------------------------
 mat rmvnormArma(int n, vec mu, mat sigma) {
    //-------------------------------------------------------------
@@ -79,7 +91,7 @@ mat rmvnormArma(int n, vec mu, mat sigma) {
 }
 
 //-------------------------------------------------------------------------------
-// FUNCTION: log of the integrated likelihood for tsb, for a given tree/leaf.
+// log of the integrated likelihood for tsbart, for a given tree/leaf.
 //-------------------------------------------------------------------------------
 double lil_ts(vec nt, vec sy_vec, double sy2, double sigma, vec mu0, mat Prec0){
    // nt = vector of number of obs in each time point for the given tree/leaf. nt = [nl_{t=1}, ..., nl_{t=T}]
@@ -88,24 +100,57 @@ double lil_ts(vec nt, vec sy_vec, double sy2, double sigma, vec mu0, mat Prec0){
    // mu0 = vector of prior means.
    // Prec0 = prior precision matrix for means (from sq exp kernel)
 
-   double sig2 = sigma*sigma;
+   // For computational efficiency, we leave out the -.5*(mu_0^T K mu_0) term, since
+   // we let mu_0=0.  Add this term if mu0 != 0.
 
-   // Total number of yl in leaf.
-   double nl = sum(nt);
+   double sig2 = sigma*sigma;    //sigma^2
+   double nl = sum(nt);          // Total number of yl in leaf.
 
    // Precache a few terms to make calculation faster.
-   vec b = sy_vec/sig2 + Prec0*mu0; // K = Prec0
-   mat A = Prec0;
-   A.diag() = A.diag() + nt/sig2;
+   vec b = sy_vec/sig2 + Prec0*mu0;
+   mat C = Prec0;
+   C.diag() = C.diag() + nt/sig2;
 
-   // Calculate log-likelihood.  Note: mu0.t()*K*mu0 excluded as cancels in ratios.
-   double ll = -.5*nl*log(2*PI*sig2) + .5*log(det(A)) - .5*as_scalar(sy2/sig2 - b.t()*A.i()*b);
+   // Calculate log-likelihood.  Note: mu0.t()*K*mu0 excluded as mu0=0.
+   double ll = -.5*nl*log(2*PI*sig2) + .5*log(det(Prec0)) - .5*log(det(C)) -
+                .5*as_scalar(sy2/sig2 - b.t()*C.i()*b);
+
    return(ll);
 }
 
+// For het variances.
+double lilhet_ts(double n0, double n, vec n_vec, vec sy_vec, double sy2, vec mu0, mat Prec0){
+   // n0 = number of obs in given tree/leaf.
+   // n = sum of log-precisions phi in given tree/leaf.
+   // n_vec = vector of sum of phi's for het, at each time point, for given tree/leaf.
+   // sy = vector of sums of y's * phi's at each time point.  sy = [ sum(phi*y in t=1), ..., sum(phi*y in t=T) ]
+   // sy2 = scalar, sum of y*y*phi for all obs in given tree/leaf.
+   // mu0 = vector of prior means.
+   // Prec0 = prior precision matrix for means (from sq exp kernel)
+
+   // For computational efficiency, we leave out the -.5*(mu_0^T K mu_0) term, since
+   // we let mu_0=0.  Add this term if mu0 != 0.
+
+   // Precache a few terms to make calculation faster.
+   mat C = Prec0; // K = Prec0
+   C.diag() += n_vec; // Add sums of precisions to diagonal.
+   vec b = sy_vec + Prec0 * mu0;
+
+   // Calculate log-likelihood.  Note: mu0.t()*K*mu0 excluded as cancels in ratios.
+   double ll = - .5*n0*log(2*PI)
+               + .5*n // This is the .5 * log(det(Lambda)) term, where Lambda=diag(w).
+               + .5*log(det(Prec0))
+               - .5*log(det(C))
+               - as_scalar(.5*(sy2 - b.t()*C.i()*b));
+
+   return(ll);
+}
+
+
 //-------------------------------------------------------------------------------
-// FUNCTION: tsb: get sufficients stats for all bottom nodes
+// NEW: tsbart: get sufficients stats for all bottom nodes
 //-------------------------------------------------------------------------------
+
 void allsuff_ts(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv, std::vector<sinfo>& sv)
 {
    // Bottom nodes are written to bnv.
@@ -160,16 +205,82 @@ void allsuff_ts(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv, std::vector<sinfo
       sv[ni].n_vec(id) += 1;
       sv[ni].sy_vec(id) += y;
 
-//      Rcout << "Made it to matching time point for obs " << i << endl;
-//      Rcout << "Node " << ni << ", time " << id << endl;
-//      Rcout << "n_vec" << endl << sv[ni].n_vec;
-//      Rcout << "sy_vec" << endl << sv[ni].sy_vec;
+   } // End obs loop.
+}
+
+// For het variances.
+void allsuffhet_ts(tree& x, xinfo& xi, dinfo& di, double* phi, tree::npv& bnv, std::vector<sinfo>& sv)
+{
+   // phi are precisions for each observation.
+
+   // Bottom nodes are written to bnv.
+   // Suff stats for each bottom node are written to elements (each of class sinfo) of sv.
+   // Initialize data structures
+   tree::tree_cp tbn; //the pointer to the bottom node for the current observations.  tree_cp bc not modifying tree directly.
+   size_t ni;         //the  index into vector of the current bottom node
+   double *xx;        //current x
+   double y;          //current y
+   double t;          //current t
+
+   bnv.clear();      // Clear the bnv variable if any value is already saved there.
+   x.getbots(bnv);   // Save bottom nodes for x to bnv variable.
+
+   typedef tree::npv::size_type bvsz;  // Is a better C way to set type.  (tree::npv::size_type) will resolve to an integer,
+   // or long int, etc.  We don't have to know that ahead of time by using this notation.
+   bvsz nb = bnv.size();   // Initialize new var nb of type bvsz for number of bottom nodes, then...
+   sv.resize(nb);          // Re-sizing suff stat vector to have same size as bottom nodes.
+
+   // Resize vectors within sufficient stats to have di.tlen length.
+   for(size_t i = 0; i < nb; ++i){
+      sv[i].n0_vec.resize(di.tlen);
+      sv[i].n_vec.resize(di.tlen);
+      sv[i].sy_vec.resize(di.tlen);
+
+      // Fill with zeros, in case.
+      sv[i].n0_vec.fill(0);
+      sv[i].n_vec.fill(0);
+      sv[i].sy_vec.fill(0);
+   }
+
+   // bnmap is a tuple (lookups, like in Python).  Want to index by bottom nodes.
+   std::map<tree::tree_cp,size_t> bnmap;
+   for(bvsz i=0;i!=bnv.size();i++) bnmap[bnv[i]]=i;  // bnv[i]
+   //map looks like
+   // bottom node 1 ------ 1
+   // bottom node 2 ------ 2
+
+   // Sum the y values (sy) and the y^2 values (sy2) for each node and store in sv.
+   // Loop through each observation.  Push each obs x down the tree and find its bottom node,
+   // then index into the suff stat for the bottom node corresponding to that obs.
+
+   for(size_t i=0;i<di.n;i++) {
+      xx = di.x + i*di.p;  //Index value: di.x is pointer to first element of n*p data vector.  Iterates through each element.
+      y=di.y[i];           // Resolves to r.
+      t = di.t[i];         // NEW: Resolves to current t
+
+      tbn = x.bn(xx,xi); // Find bottom node for this observation.
+      ni = bnmap[tbn];   // Map bottom node to integer index
+
+      // Update the sufficient stats for the bottom node to which that obs belongs.
+      sv[ni].n0 += 1;
+      sv[ni].n += log(phi[i]); //sv[ni].n += phi[i];
+      sv[ni].sy += phi[i]*y;
+      sv[ni].sy2 += phi[i]*y*y;
+
+      // Find index of matching time point.  Then adjust that entry for n_vec and sy_vec.
+      uvec id = find(di.tref == t); // Idx of current obs t value.
+      sv[ni].n0_vec(id) +=1;
+      sv[ni].n_vec(id) += phi[i];
+      sv[ni].sy_vec(id) += phi[i]*y;
+
    } // End obs loop.
 }
 
 //-------------------------------------------------------------------------------
-// FUNCTION: tsb: get sufficient stats for children of node nx in tree x (for birth proposal)
+// NEW: tsbart: get sufficient stats for children of node nx in tree x
+// (for birth proposal)
 //-------------------------------------------------------------------------------
+// Birth proposal, homog variances.
 void getsuff_ts(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr, size_t tlen)
 {
    double *xx;//current x
@@ -214,10 +325,59 @@ void getsuff_ts(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo&
    }
 }
 
-//--------------------------------------------------
-// FUNCTION: get sufficient stats for pair of bottom children nl(left) and nr(right) in tree x (for death proposal)
-//--------------------------------------------------
+// Birth proposal, het variances.
+void getsuffhet_ts(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo& di, double* phi, sinfo& sl, sinfo& sr, size_t tlen)
+{
+   double *xx;//current x
+   double y;  //current y
+   double t;  //current t
 
+   sl.n0=0;sl.n=0;sl.sy=0.0;sl.sy2=0.0;
+   sr.n0=0;sr.n=0;sr.sy=0.0;sr.sy2=0.0;
+
+   sl.n0_vec = zeros(tlen); sl.n_vec = zeros(tlen); sl.sy_vec = zeros(tlen);
+   sr.n0_vec = zeros(tlen); sr.n_vec = zeros(tlen); sr.sy_vec = zeros(tlen);
+
+   for(size_t i=0;i<di.n;i++) {
+      xx = di.x + i*di.p;
+      if(nx==x.bn(xx,xi)) { //does the bottom node = xx's bottom node
+
+         y = di.y[i];   // extract current yi.
+         t = di.t[i];   // extract current ti
+
+         if(xx[v] < xi[v][c]) { // Update left.
+            sl.n0 += 1;
+            sl.n += log(phi[i]); //+= phi[i];
+            sl.sy += phi[i]*y;
+            sl.sy2 += phi[i]*y*y;
+
+            // Find index of matching time point.  Then adjust that entry for n_vec and sy_vec.
+            uvec id = find(di.tref == t); // Idx of current obs t value.
+            sl.n0_vec(id) += 1;
+            sl.n_vec(id) += phi[i];
+            sl.sy_vec(id) += phi[i]*y;
+
+         } else { //Update right.
+            sr.n0 += 1;
+            sr.n += log(phi[i]); //phi[i];
+            sr.sy += phi[i]*y;
+            sr.sy2 += phi[i]*y*y;
+
+            // Find index of matching time point.  Then adjust that entry for n_vec and sy_vec.
+            uvec id = find(di.tref == t); // Idx of current obs t value.
+            sr.n0_vec(id) += 1;
+            sr.n_vec(id) += phi[i];
+            sr.sy_vec(id) += phi[i]*y;
+         }
+      }
+   }
+}
+
+//--------------------------------------------------
+//get sufficient stats for pair of bottom children nl(left) and nr(right) in tree x
+// (for death proposal)
+//--------------------------------------------------
+// Death proposal, homog variance.
 void getsuff_ts(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr, size_t tlen)
 {
    double *xx;//current x
@@ -230,12 +390,6 @@ void getsuff_ts(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& d
    sl.n_vec = zeros(tlen); sl.sy_vec = zeros(tlen);
    sr.n_vec = zeros(tlen); sr.sy_vec = zeros(tlen);
 
-   // Rcpp::Rcout << "di.tlen " << di.tlen << endl;
-   // Rcpp::Rcout << "sl.n_vec " << endl << sl.n_vec;
-   // Rcpp::Rcout << endl << "sl.sy_vec" << endl << sl.sy_vec;
-   // Rcpp::Rcout << "sr.n_vec " << endl << sr.n_vec;
-   // Rcpp::Rcout << endl << "sr.sy_vec" << endl << sr.sy_vec;
-
    for(size_t i=0;i<di.n;i++) {
       xx = di.x + i*di.p;
       tree::tree_cp bn = x.bn(xx,xi);
@@ -246,7 +400,6 @@ void getsuff_ts(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& d
       uvec id = find(di.tref == t); // Idx of current obs t value.
 
       if(bn==nl) {
-     //    Rcpp::Rcout << endl << "bn==nl" << endl;
          sl.n++;
          sl.sy += y;
          sl.sy2 += y*y;
@@ -257,7 +410,6 @@ void getsuff_ts(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& d
       }
 
       if(bn==nr) {
-//       Rcpp::Rcout << endl << "bn==nr" << endl;
          sr.n++;
          sr.sy += y;
          sr.sy2 += y*y;
@@ -269,7 +421,121 @@ void getsuff_ts(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& d
    }
 }
 
+// For death proposal, het variances.
+void getsuffhet_ts(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, double* phi, sinfo& sl, sinfo& sr, size_t tlen)
+{
+   double *xx;//current x
+   double y;  //current y
+   double t;  //current t
 
+   sl.n0=0;sl.n=0;sl.sy=0.0;sl.sy2=0.0;
+   sr.n0=0;sr.n=0;sr.sy=0.0;sr.sy2=0.0;
+
+   sl.n0_vec = zeros(tlen); sl.n_vec = zeros(tlen); sl.sy_vec = zeros(tlen);
+   sr.n0_vec = zeros(tlen); sr.n_vec = zeros(tlen); sr.sy_vec = zeros(tlen);
+
+   for(size_t i=0;i<di.n;i++) {
+      xx = di.x + i*di.p;
+      tree::tree_cp bn = x.bn(xx,xi);
+
+      y = di.y[i];   // extract current yi.
+      t = di.t[i];   // extract current ti
+
+      if(bn==nl) {
+         y = di.y[i];
+         sl.n0 += 1;
+         sl.n += log(phi[i]); //phi[i];
+         sl.sy += phi[i]*y;
+         sl.sy2 += phi[i]*y*y;
+
+         // Find index of matching time point.  Then adjust that entry for n_vec and sy_vec.
+         uvec id = find(di.tref == t); // Idx of current obs t value.
+         sl.n0_vec(id) += 1;
+         sl.n_vec(id) += phi[i];
+         sl.sy_vec(id) += phi[i]*y;
+      }
+
+      if(bn==nr) {
+         y = di.y[i];
+         sr.n0 += 1;
+         sr.n += log(phi[i]); //phi[i];
+         sr.sy += phi[i]*y;
+         sr.sy2 += phi[i]*y*y;
+
+         // Find index of matching time point.  Then adjust that entry for n_vec and sy_vec.
+         uvec id = find(di.tref == t); // Idx of current obs t value.
+         sr.n0_vec(id) += 1;
+         sr.n_vec(id) += phi[i];
+         sr.sy_vec(id) += phi[i]*y;
+      }
+   }
+}
+
+//--------------------------------------------------
+// draw all the bottom node mu's
+
+// For homog variances.
+void drmu(tree& t, xinfo& xi, dinfo& di, pinfo& pi, RNG& gen)
+{
+   tree::npv bnv;
+   std::vector<sinfo> sv(di.tlen);
+   allsuff_ts(t,xi,di,bnv,sv);
+
+   List post_pars;
+   mat Phi;
+   vec m;
+   vec mu_draw;
+
+   for(tree::npv::size_type i=0;i!=bnv.size();i++) {
+
+      // Draw new mu value from MVN.
+      post_pars = mvn_post_util(pi.sigma, pi.mu0, pi.Prec0, sv[i].n_vec, sv[i].sy_vec);
+
+      Phi = Rcpp::as<arma::mat>(post_pars["Phi"]);
+      m = Rcpp::as<arma::vec>(post_pars["m"]);
+      mu_draw = rmvnorm_post(m, Phi);
+
+      // Assign botton node values to new mu draw.
+      bnv[i] -> setm(mu_draw);
+
+      // Check for NA result.
+      if(sum(bnv[i]->getm() == bnv[i]->getm()) == 0) {
+          Rcpp::stop("drmu failed");
+      }
+   }
+}
+
+// For heterogeneous variances.
+void drmuhet(tree& t, xinfo& xi, dinfo& di, double* phi, pinfo& pi, RNG& gen)
+{
+   tree::npv bnv;
+   std::vector<sinfo> sv(di.tlen);
+   allsuffhet_ts(t,xi,di,phi,bnv,sv);
+
+   List post_pars;
+   mat Phi;
+   vec m;
+   vec mu_draw;
+
+   for(tree::npv::size_type i=0;i!=bnv.size();i++) {
+
+      // Draw new mu value from MVN.
+      post_pars = mvn_post_util_het(pi.mu0, pi.Prec0, sv[i].n0_vec, sv[i].n_vec, sv[i].sy_vec);
+
+      Phi = Rcpp::as<arma::mat>(post_pars["Phi"]);
+      m = Rcpp::as<arma::vec>(post_pars["m"]);
+      mu_draw = rmvnorm_post(m, Phi);
+
+      // Assign botton node values to new mu draw.
+      bnv[i] -> setm(mu_draw);
+
+      // Check for NA result.
+      if(sum(bnv[i]->getm() == bnv[i]->getm()) == 0) {
+         for(size_t i=0; i<di.n; ++i) Rcout << *(di.x + i*di.p) <<" "; //*(x + p*i+j)
+         Rcpp::stop("drmu failed");
+      }
+   }
+}
 
 //--------------------------------------------------
 // normal density N(x, mean, variance)
@@ -378,50 +644,6 @@ double pgrow(tree::tree_p n, xinfo& xi, pinfo& pi)
 }
 
 //--------------------------------------------------
-//get sufficients stats for all bottom nodes (sy, sy2)
-void allsuff(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv, std::vector<sinfo>& sv)
-{
-   // Bottom nodes are written to bnv.
-   // Suff stats for each bottom node are written to elements (each of class sinfo) of sv.
-   // Initialize data structures
-   tree::tree_cp tbn; //the pointer to the bottom node for the current observations.  tree_cp bc not modifying tree directly.
-   size_t ni;         //the  index into vector of the current bottom node
-   double *xx;        //current x
-   double y;          //current y
-
-   bnv.clear();      // Clear the bnv variable if any value is already saved there.
-   x.getbots(bnv);   // Save bottom nodes for x to bnv variable.
-
-   // Not sure what this part here is doing.
-   typedef tree::npv::size_type bvsz;  // Is a better C way to set type.  (tree::npv::size_type) will resolve to an integer,
-   // or long int, etc.  We don't have to know that ahead of time by using this notation.
-   bvsz nb = bnv.size();   // Initialize new var nb of type bvsz for number of bottom nodes, then...
-   sv.resize(nb);          // Re-sizing suff stat vector to have same size as bottom nodes.
-
-   // bnmap is a tuple (lookups, like in Python).  Want to index by bottom nodes.
-   std::map<tree::tree_cp,size_t> bnmap;
-   for(bvsz i=0;i!=bnv.size();i++) bnmap[bnv[i]]=i;  // bnv[i]
-   //map looks like
-   // bottom node 1 ------ 1
-   // bottom node 2 ------ 2
-
-   // Sum the y values (sy) and the y^2 values (sy2) for each node and store in sv.
-   // Loop through each observation.  Push each obs x down the tree and find its bottom node,
-   // then index into the suff stat for the bottom node corresponding to that obs.
-   for(size_t i=0;i<di.n;i++) {
-      xx = di.x + i*di.p;  //Index value: di.x is pointer to first element of n*p data vector.  Iterates through each element.
-      y=di.y[i];           // Resolves to r.
-
-      tbn = x.bn(xx,xi); // Find bottom node for this observation.
-      ni = bnmap[tbn];   // Map bottom node to integer index
-
-      // Update the sufficient stats for the bottom node to which that obs belongs.
-      ++(sv[ni].n);
-      sv[ni].sy += y;
-      sv[ni].sy2 += y*y;
-   }
-}
-
 
 //get counts for all bottom nodes
 std::vector<int> counts(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv)
@@ -548,62 +770,6 @@ bool min_leaf(int minct, std::vector<tree>& t, xinfo& xi, dinfo& di) {
   return good;
 }
 
-
-
-//--------------------------------------------------
-//get sufficient stats for children (v,c) of node nx in tree x
-void getsuff(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr)
-{
-	double *xx;//current x
-	double y;  //current y
-	sl.n=0;sl.sy=0.0;sl.sy2=0.0;
-	sr.n=0;sr.sy=0.0;sr.sy2=0.0;
-
-	for(size_t i=0;i<di.n;i++) {
-		xx = di.x + i*di.p;
-		if(nx==x.bn(xx,xi)) { //does the bottom node = xx's bottom node
-			y = di.y[i];
-			if(xx[v] < xi[v][c]) {
-				sl.n++;
-				sl.sy += y;
-				sl.sy2 += y*y;
-			} else {
-				sr.n++;
-				sr.sy += y;
-				sr.sy2 += y*y;
-			}
-		}
-	}
-}
-
-
-//--------------------------------------------------
-//get sufficient stats for pair of bottom children nl(left) and nr(right) in tree x
-void getsuff(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr)
-{
-	double *xx;//current x
-	double y;  //current y
-	sl.n=0;sl.sy=0.0;sl.sy2=0.0;
-	sr.n=0;sr.sy=0.0;sr.sy2=0.0;
-
-	for(size_t i=0;i<di.n;i++) {
-		xx = di.x + i*di.p;
-		tree::tree_cp bn = x.bn(xx,xi);
-		if(bn==nl) {
-			y = di.y[i];
-			sl.n++;
-			sl.sy += y;
-			sl.sy2 += y*y;
-		}
-		if(bn==nr) {
-			y = di.y[i];
-			sr.n++;
-			sr.sy += y;
-			sr.sy2 += y*y;
-		}
-	}
-}
-
 //--------------------------------------------------
 //fit for multiple data points, not by reference.
 void fit(tree& t, xinfo& xi, dinfo& di, vec& fv)
@@ -657,54 +823,6 @@ void partition(tree& t, xinfo& xi, dinfo& di, std::vector<size_t>& pv)
 }
 
 //--------------------------------------------------
-// draw all the bottom node mu's
-void drmu(tree& t, xinfo& xi, dinfo& di, pinfo& pi, RNG& gen)
-{
-	tree::npv bnv;
-	std::vector<sinfo> sv(di.tlen);
-//	Rcout << "Entered drmu function" << endl;
-
-	allsuff_ts(t,xi,di,bnv,sv);
-//	Rcout << "Completed allsuff_ts" << endl;
-
-//	Rcout << "drmu sv " << endl;
-//	Rcout << "sv.n " << sv[0].n << endl;
-//	Rcout << "sv.n_vec " << endl << sv[0].n_vec << endl;
-//	Rcout << "sv.sy2 " << sv[0].sy2 << endl;
-//	Rcout << "sv.sy_vec " << endl << sv[0].sy_vec << endl;
-
-	List post_pars;
-	mat Phi;
-	vec m;
-	vec mu_draw;
-
-	for(tree::npv::size_type i=0;i!=bnv.size();i++) {
-
-	   // Draw new mu value from MVN.
-	   post_pars = mvn_post_util(pi.sigma, pi.mu0, pi.Prec0, sv[i].n_vec, sv[i].sy_vec);
-
-	   Phi = Rcpp::as<arma::mat>(post_pars["Phi"]);
-	   m = Rcpp::as<arma::vec>(post_pars["m"]);
-      mu_draw = rmvnorm_post(m, Phi);
-
-      // Assign botton node values to new mu draw.
-      bnv[i] -> setm(mu_draw);
-
-    // Check for NA result.
-    if(sum(bnv[i]->getm() == bnv[i]->getm()) == 0) {
-      //for(size_t i=0; i<di.n; ++i) Rcout << *(di.x + i*di.p) <<" "; //*(x + p*i+j)
-      //Rcout << endl<<" a "<< a<<" b "<<b<<" svi[n] "<<sv[i].n<<" i "<<i;
-      //Rcout << endl << t;
-      Rcout << "mu_draw: " << endl << mu_draw << endl;
-      Rcout << "Phi: " << endl << Phi << endl;
-      Rcout << "m: " << endl << m << endl;
-
-      Rcpp::stop("drmu failed");
-    }
-	}
-}
-
-//--------------------------------------------------
 //write cutpoint information to screen
 void prxi(xinfo& xi)
 {
@@ -741,7 +859,6 @@ void makexinfo(size_t p, size_t n, double *x, xinfo& xi, size_t nc)
 		for(size_t j=0;j<nc;j++) xi[i][j] = minx[i] + (j+1)*xinc;
 	}
 }
-
 // get min/max needed to make cutpoints
 void makeminmax(size_t p, size_t n, double *x, std::vector<double> &minx, std::vector<double> &maxx)
 {
@@ -755,7 +872,6 @@ void makeminmax(size_t p, size_t n, double *x, std::vector<double> &minx, std::v
 		}
 	}
 }
-
 //make xinfo = cutpoints give the minx and maxx vectors
 void makexinfominmax(size_t p, xinfo& xi, size_t nc, std::vector<double> &minx, std::vector<double> &maxx)
 {
@@ -769,7 +885,7 @@ void makexinfominmax(size_t p, xinfo& xi, size_t nc, std::vector<double> &minx, 
 	}
 }
 
-// Check if a vector is sorted.  For checking z and zpred for tsbcf.
+// Check if a vector is sorted.  For checking z and zpred for causal funbart.
 bool is_sort(arma::vec x) {
      int n=x.n_elem;
      for (int i=0; i<n-1; ++i)
@@ -817,4 +933,103 @@ bool is_sort(arma::vec x) {
 //    double logb = gig_norm(0.5*n-tau, 2.0*tau, sy2);
 //    rv += logsumexp(loga, logb);
 //    return rv;
+// }
+
+
+// //get sufficients stats for all bottom nodes (sy, sy2)
+// void allsuff(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv, std::vector<sinfo>& sv)
+// {
+//    // Bottom nodes are written to bnv.
+//    // Suff stats for each bottom node are written to elements (each of class sinfo) of sv.
+//    // Initialize data structures
+//    tree::tree_cp tbn; //the pointer to the bottom node for the current observations.  tree_cp bc not modifying tree directly.
+//    size_t ni;         //the  index into vector of the current bottom node
+//    double *xx;        //current x
+//    double y;          //current y
+//
+//    bnv.clear();      // Clear the bnv variable if any value is already saved there.
+//    x.getbots(bnv);   // Save bottom nodes for x to bnv variable.
+//
+//    // Not sure what this part here is doing.
+//    typedef tree::npv::size_type bvsz;  // Is a better C way to set type.  (tree::npv::size_type) will resolve to an integer,
+//    // or long int, etc.  We don't have to know that ahead of time by using this notation.
+//    bvsz nb = bnv.size();   // Initialize new var nb of type bvsz for number of bottom nodes, then...
+//    sv.resize(nb);          // Re-sizing suff stat vector to have same size as bottom nodes.
+//
+//    // bnmap is a tuple (lookups, like in Python).  Want to index by bottom nodes.
+//    std::map<tree::tree_cp,size_t> bnmap;
+//    for(bvsz i=0;i!=bnv.size();i++) bnmap[bnv[i]]=i;  // bnv[i]
+//    //map looks like
+//    // bottom node 1 ------ 1
+//    // bottom node 2 ------ 2
+//
+//    // Sum the y values (sy) and the y^2 values (sy2) for each node and store in sv.
+//    // Loop through each observation.  Push each obs x down the tree and find its bottom node,
+//    // then index into the suff stat for the bottom node corresponding to that obs.
+//    for(size_t i=0;i<di.n;i++) {
+//       xx = di.x + i*di.p;  //Index value: di.x is pointer to first element of n*p data vector.  Iterates through each element.
+//       y=di.y[i];           // Resolves to r.
+//
+//       tbn = x.bn(xx,xi); // Find bottom node for this observation.
+//       ni = bnmap[tbn];   // Map bottom node to integer index
+//
+//       // Update the sufficient stats for the bottom node to which that obs belongs.
+//       ++(sv[ni].n);
+//       sv[ni].sy += y;
+//       sv[ni].sy2 += y*y;
+//    }
+// }
+
+
+// //--------------------------------------------------
+// //get sufficient stats for children (v,c) of node nx in tree x
+// void getsuff(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr)
+// {
+//    double *xx;//current x
+//    double y;  //current y
+//    sl.n=0;sl.sy=0.0;sl.sy2=0.0;
+//    sr.n=0;sr.sy=0.0;sr.sy2=0.0;
+//
+//    for(size_t i=0;i<di.n;i++) {
+//       xx = di.x + i*di.p;
+//       if(nx==x.bn(xx,xi)) { //does the bottom node = xx's bottom node
+//          y = di.y[i];
+//          if(xx[v] < xi[v][c]) {
+//             sl.n++;
+//             sl.sy += y;
+//             sl.sy2 += y*y;
+//          } else {
+//             sr.n++;
+//             sr.sy += y;
+//             sr.sy2 += y*y;
+//          }
+//       }
+//    }
+// }
+
+// //--------------------------------------------------
+// //get sufficient stats for pair of bottom children nl(left) and nr(right) in tree x
+// void getsuff(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr)
+// {
+//    double *xx;//current x
+//    double y;  //current y
+//    sl.n=0;sl.sy=0.0;sl.sy2=0.0;
+//    sr.n=0;sr.sy=0.0;sr.sy2=0.0;
+//
+//    for(size_t i=0;i<di.n;i++) {
+//       xx = di.x + i*di.p;
+//       tree::tree_cp bn = x.bn(xx,xi);
+//       if(bn==nl) {
+//          y = di.y[i];
+//          sl.n++;
+//          sl.sy += y;
+//          sl.sy2 += y*y;
+//       }
+//       if(bn==nr) {
+//          y = di.y[i];
+//          sr.n++;
+//          sr.sy += y;
+//          sr.sy2 += y*y;
+//       }
+//    }
 // }

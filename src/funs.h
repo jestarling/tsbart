@@ -45,6 +45,7 @@ mat cov_se(vec t1,      // first vector of time points.
 //--------------------------------------------------
 // MVN posterior utility function.
 Rcpp::List mvn_post_util(double sigma, vec mu0, mat Prec0, vec n_vec, vec ybar_vec);
+Rcpp::List mvn_post_util_het(vec mu0, mat Prec0, vec n0_vec, vec n_vec, vec sy_vec);
 
 //--------------------------------------------------
 // NEW: log of the integrated likelihood for time series, for a given tree/leaf.
@@ -55,15 +56,20 @@ double lil_ts(vec nt,         // nt = vector of number of obs in each time point
               vec mu0,        // mu0 = vector of prior means.
               mat Prec0);    // Prec0 = prior precision matrix for means (from sq exp kernel)
 
+double lilhet_ts(double n0, double n, vec n_vec, vec sy_vec, double sy2, vec mu0, mat Prec0);
+
 //--------------------------------------------------
 // NEW: time series; get sufficients stats for all bottom nodes
 void allsuff_ts(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv, std::vector<sinfo>& sv);
+void allsuffhet_ts(tree& x, xinfo& xi, dinfo& di, double* phi, tree::npv& bnv, std::vector<sinfo>& sv);
 
 // NEW: Time Series: get sufficient stats for children (v,c) of node nx in tree x
 void getsuff_ts(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr, size_t tlen);
+void getsuffhet_ts(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo& di, double* phi, sinfo& sl, sinfo& sr, size_t tlen);
 
 //NEW: get sufficient stats for pair of bottom children nl(left) and nr(right) in tree x
 void getsuff_ts(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr, size_t tlen);
+void getsuffhet_ts(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, double* phi, sinfo& sl, sinfo& sr, size_t tlen);
 
 //--------------------------------------------------
 //normal density
@@ -93,10 +99,7 @@ void getgoodvars(tree::tree_p n, xinfo& xi, std::vector<size_t>& goodvars);
 //--------------------------------------------------
 //get prob a node grows, 0 if no good vars, else a/(1+d)^b
 double pgrow(tree::tree_p n, xinfo& xi, pinfo& pi);
-//--------------------------------------------------
-//get sufficients stats for all bottom nodes
-void allsuff(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv, std::vector<sinfo>& sv);
-void allsuffhet(tree& x, xinfo& xi, dinfo& di, double* phi, tree::npv& bnv, std::vector<sinfo>& sv);
+
 //--------------------------------------------------
 //get counts for all bottom nodes
 std::vector<int> counts(tree& x, xinfo& xi, dinfo& di);
@@ -113,14 +116,6 @@ void update_counts(int i, std::vector<int>& cts, tree& x, xinfo& xi, dinfo& di, 
 //--------------------------------------------------
 //check minimum leaf size
 bool min_leaf(int minct, std::vector<tree>& t, xinfo& xi, dinfo& di);
-//--------------------------------------------------
-//get sufficient stats for children (v,c) of node nx in tree x
-void getsuff(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr);
-void getsuffhet(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo& di, double* phi, sinfo& sl, sinfo& sr);
-//--------------------------------------------------
-//get sufficient stats for pair of bottom children nl(left) and nr(right) in tree x
-void getsuff(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr);
-void getsuffhet(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, double* phi, sinfo& sl, sinfo& sr);
 
 //--------------------------------------------------
 //fit
@@ -205,5 +200,20 @@ bool is_sort(arma::vec x);
 // double lilhet(double n, double sy, double sy2, double sigma, double tau);
 // //sy isn't needed, but convenient to maintain fcn sig
 // double lilprec(double n, double sy, double sy2, double sigma, double tau);
+
+
+// //--------------------------------------------------
+// //get sufficients stats for all bottom nodes
+// void allsuff(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv, std::vector<sinfo>& sv);
+// void allsuffhet(tree& x, xinfo& xi, dinfo& di, double* phi, tree::npv& bnv, std::vector<sinfo>& sv);
+
+// //--------------------------------------------------
+// //get sufficient stats for children (v,c) of node nx in tree x
+// void getsuff(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr);
+// void getsuffhet(tree& x, tree::tree_cp nx, size_t v, size_t c, xinfo& xi, dinfo& di, double* phi, sinfo& sl, sinfo& sr);
+// //--------------------------------------------------
+// //get sufficient stats for pair of bottom children nl(left) and nr(right) in tree x
+// void getsuff(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, sinfo& sl, sinfo& sr);
+// void getsuffhet(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo& di, double* phi, sinfo& sl, sinfo& sr);
 
 #endif
