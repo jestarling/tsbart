@@ -5,7 +5,7 @@ Implements the BART with Targeted Smoothing method (tsBART) detailed in Starling
 
 BART with Targeted Smoothing, or tsBART, is an extension of the original BART model which induces smoothness over a single targeted covariate. 
 
-Targeted Smooth BCF (tsbcf) is an extension of Bayesian Causal FOrests and tsBART, which allows for heterogeneous treatment effects which vary smoothly across a target covariate.
+Targeted Smooth BCF (tsbcf) is an extension of Bayesian Causal Forests and tsBART, which allows for heterogeneous treatment effects which vary smoothly across a target covariate.
 
 ## Documentation
 
