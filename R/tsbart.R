@@ -14,7 +14,7 @@
    return( all( out ) )
 }
 
-tsbart <- function(y, tgt, x, tpred=0, xpred=matrix(0,0,0),
+tsbart <- function(y, tgt, x, tpred=NULL, xpred=NULL,
                    nburn=100, nsim=1000, ntree=200,
                    lambda=NULL, sigq=.9, sighat=NULL, nu=3,
                    ecross=1, base_tree=.95, power_tree=2, sd_control = 2*sd(y),
@@ -66,7 +66,11 @@ tsbart <- function(y, tgt, x, tpred=0, xpred=matrix(0,0,0),
    # These are not output.
    #---------------------------------------------------------------
    predict = 1
-   if( .ident(tpred,0) & .ident(xpred,matrix(0,0,0)) ){
+
+   if((is.null(tpred) & !is.null(xpred)) | (!is.null(tpred) & is.null(xpred))){
+      stop('To predict, provide both tpred and xpred.')
+   }
+   if( is.null(tpred) & is.null(xpred) ){
       predict = 0
       tpred = tgt[1:min(3,length(tgt))]
       xpred = x[1:min(3,nrow(x)),,drop=F]
@@ -146,13 +150,23 @@ tsbart <- function(y, tgt, x, tpred=0, xpred=matrix(0,0,0),
    if(class(ecross)=="character" & ecross!="tune") stop("ecross must be a positive value or set to 'tune', case-sensitive.")
    #if(save_trees==T & is.null(tree_fname)) stop('If save_trees=TRUE, must spply a filename.')
 
+
+
+   ################################################################
+   # Order data frame in ascending order of t value.
+   # (For monotonicity projection.)
+   ################################################################
+   perm = order(tgt, decreasing=FALSE)
+   perm_oos = order(tpred, decreasing=FALSE)
+
+
    ################################################################
    # Create model matrix and set up hyperparameters.
    ################################################################
 
+   # Scale/center y.
    ybar = mean(y)
    ysd = sd(y)
-
    y = (y - ybar) / ysd
 
    # Model matrix.
@@ -187,10 +201,11 @@ tsbart <- function(y, tgt, x, tpred=0, xpred=matrix(0,0,0),
    ################################################################
    if(ecross=="tune"){
       tuned = tuneEcross(ecross_candidates = seq(.25,5,by=.25),
-                         y, tgt, tpred, x, xpred, nburn=500, nsim=500, ntree=200,
+                         y[perm], tgt[perm], x[perm,],
+                         nburn=500, nsim=500, ntree=200,
                          lambda, sigq, sighat, nu,
                          base_tree, power_tree,
-                         probit, yobs)
+                         probit, yobs[perm])
       ecross = tuned$ecross_opt
    }
 
@@ -200,8 +215,10 @@ tsbart <- function(y, tgt, x, tpred=0, xpred=matrix(0,0,0),
    ################################################################
    out = NULL
 
+   # Continuous response.
    if(probit==FALSE){
-      out = tsbartFit(y=y, tgt=tgt, tpred=tpred, x=t(xx), xpred=t(xxpred), xinfo_list=cutpoints,
+      out = tsbartFit(y=y[perm], tgt=tgt[perm], tpred=tpred[perm_oos],
+                      x=t(xx[perm,]), xpred=t(xxpred[perm_oos,]), xinfo_list=cutpoints,
                       nburn=nburn, nsim=nsim, ntree=ntree,
                       lambda=lambda, sigq=sigq, sighat=sighat, nu=nu,
                       ecross=ecross, base_tree=base_tree, power_tree=power_tree,
@@ -210,8 +227,11 @@ tsbart <- function(y, tgt, x, tpred=0, xpred=matrix(0,0,0),
                       use_fscale=use_fscale,
                       save_trees=FALSE,
                       silent_mode=!verbose)
-   } else{
-      out = tsbartProbit(y=y, yobs=yobs, tgt=tgt, tpred=tpred, x=t(xx), xpred=t(xxpred), xinfo_list=cutpoints,
+
+   # Probit response.
+   } else if(probit==TRUE){
+      out = tsbartProbit(y=y[perm], yobs=yobs[perm], tgt=tgt[perm], tpred=tpred[perm_oos],
+                         x=t(xx[perm,]), xpred=t(xxpred[perm_oos,]), xinfo_list=cutpoints,
                          nburn=nburn, nsim=nsim, offset=offset, ntree=ntree, ecross=ecross,
                          base_tree=base_tree, power_tree=power_tree,
                          treef_name_="tsb_trees.txt",
@@ -251,15 +271,16 @@ tsbart <- function(y, tgt, x, tpred=0, xpred=matrix(0,0,0),
    ################################################################
 
    if(predict){
-      out = list('mcmcdraws' = out$mcmcdraws*ysd + ybar,
-                 'mcmcdraws_oos' = out$mcmcdraws_oos*ysd + ybar,
+      output = list('mcmcdraws' = out$mcmcdraws[,order(perm)]*ysd + ybar,
+                 'mcmcdraws_oos' = out$mcmcdraws_oos[,order(perm_oos)]*ysd + ybar,
                  'sigma' = out$sigma*ysd,
                  'treefit_sd' =  abs(sd_control * out$eta), # sd of BART fit f(x,t).
                  'eta' = out$eta,
                  'gamma' = out$gamma,
                  'ecross' = ecross)
+
    } else{
-      out = list('mcmcdraws' = out$mcmcdraws*ysd + ybar,
+      output = list('mcmcdraws' = out$mcmcdraws[,order(perm)]*ysd + ybar,
                  'sigma' = out$sigma*ysd,
                  'treefit_sd' =  abs(sd_control * out$eta), # sd of BART fit f(x,t).
                  'eta' = out$eta,
@@ -269,14 +290,14 @@ tsbart <- function(y, tgt, x, tpred=0, xpred=matrix(0,0,0),
 
    # Include metropolis info if indicated.
    if(mh){
-      out$metrop = metrop
+      output$metrop = metrop
    }
 
    # Include inputs if indicated.
    if(save_inputs){
-      out$inputs = inputs
+      output$inputs = inputs
    }
 
    # Return output.
-   return(out)
+   return(output)
    }

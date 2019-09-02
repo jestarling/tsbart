@@ -97,8 +97,8 @@ Parameter setting consists of the following steps, all performed by the *ecrossT
 # Evaluate optimal number of crossings.
 ecross_candidates = seq(.5,3,by=.5)
 ecrossTune = tuneEcross(ecross_candidates,
-                        y=train$y, tgt=train$ti, tpred=test$ti, x=xx, xpred=x_pred,
-                        nburn=100, nsim=100, ntree=200,
+                        y=train$y, tgt=train$ti, x=xx,
+                        nburn=100, nsim=250, ntree=200,
                         lambda=lambda, sigq=sigq, sighat=sighat, nu=nu,
                         base_tree=.95, power_tree=2,
                         probit=FALSE, yobs=NULL)
@@ -161,6 +161,3 @@ ggplot(ggdf_pred %>% filter(id %in% id_sel)) +
 
 The process for fitting Targeted Smooth BART with a binary response is very similar. The tsbart() function can be used,
 with y set to the length-n vector of initial latent values, yobs set to the observed binary responses, and probit set to TRUE.
-
-If latent y values are unknown, as is usually the case, initializing at values of 1.96 and -1.96, 
-corresponding to the observed 1 and 0 y values, is effective.

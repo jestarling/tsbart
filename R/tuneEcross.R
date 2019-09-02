@@ -1,5 +1,5 @@
 tuneEcross = function(ecross_candidates = seq(.25,5,by=.25),
-                      y, tgt, tpred, x, xpred, nburn=1000, nsim=1000, ntree=200,
+                      y, tgt, x, nburn=1000, nsim=1000, ntree=200,
                       lambda=NULL, sigq=.9, sighat=NULL, nu=3,
                       base_tree=.95, power_tree=2,
                       probit=FALSE, yobs=NULL){
@@ -19,7 +19,7 @@ tuneEcross = function(ecross_candidates = seq(.25,5,by=.25),
       print(paste0('Iteration ', i, ' of ', length(ecross_candidates)))
 
       # Fit tsBART model for each ecross candidate.
-      fit = tsbart(y=y, tgt=tgt, x=x, tpred=0, xpred=matrix(0,0,0), nburn=nburn, nsim=nsim, ntree=ntree,
+      fit = tsbart(y=y, tgt=tgt, x=x, nburn=nburn, nsim=nsim, ntree=ntree,
                    lambda=lambda, sigq=sigq, sighat=sighat, nu=nu,
                    ecross=ecross_candidates[i], base_tree=base_tree, power_tree=power_tree, use_fscale=T, #sd_control=1,
                    probit=probit, yobs=yobs, verbose=F)

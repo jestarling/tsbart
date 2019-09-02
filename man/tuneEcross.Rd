@@ -5,7 +5,7 @@
 \title{tuneEcross: Utility function for tuning expected number of crossings for tsbart().}
 \usage{
 tuneEcross(ecross_candidates = seq(.25,5,by=.25),
-                      y, tgt, tpred, x, xpred, nburn=1000, nsim=1000, ntree=200,
+                      y, tgt, x, nburn=1000, nsim=1000, ntree=200,
                       lambda=NULL, sigq=.9, sighat=NULL, nu=3,
                       ecross=1, base_tree=.95, power_tree=2,
                       probit=FALSE, yobs=NULL)
@@ -18,11 +18,7 @@ tuneEcross(ecross_candidates = seq(.25,5,by=.25),
 
 \item{tgt}{Length n targeted covariate over which to smooth.}
 
-\item{tpred}{Length npred out-of-sample targeted covariate.}
-
 \item{x}{A (n x p) data frame or matrix containing the covariates which are not to be smoothed over.}
-
-\item{xpred}{A (npred x p) data frame or matrix containing out of sample covariates.}
 
 \item{nburn}{Number of burn-in MCMC iterations.}
 
@@ -63,7 +59,7 @@ This function provides tunes the expected number of crossings.  See vignette for
 \dontrun{
 ## Evaluate optimal number of crossings.
 ecrossTune = tuneEcross(ecross_candidates = seq(.25,5,by=.25),
-                      y, tgt, tpred, x, xpred, nburn, nsim, ntree=200,
+                      y, tgt, x, nburn, nsim, ntree=200,
                       lambda=NULL, sigq=.9, sighat=NULL, nu=3,
                       ecross=1, base_tree=.95, power_tree=2,
                       probit=FALSE, yobs=NULL)
