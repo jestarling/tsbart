@@ -391,12 +391,13 @@ List tsbartProbit(arma::vec y,      // True latent variable values of the respon
 
       //-------------------------------------------------
       // draw gamma
-      //pi.gamma = sqrt((1 + ((pi.eta-con_sd) * (pi.eta-con_sd))) / gen.chi_square(2));
-      double gamma_degf = 1; // For C+(con_sd).
-      double gamma_a = (gamma_degf + 1)/2;
-      double gamma_b = (gamma_degf*con_sd*con_sd + pi.eta*pi.eta)/2;
+      pi.gamma = sqrt((1 + ((pi.eta-con_sd) * (pi.eta-con_sd))) / gen.chi_square(2));
 
-      pi.gamma = gen.gamma(gamma_a, gamma_b);
+      // double gamma_degf = 1; // For C+(con_sd).
+      // double gamma_a = (gamma_degf + 1)/2;
+      // double gamma_b = (gamma_degf*con_sd*con_sd + pi.eta*pi.eta)/2;
+      //
+      // pi.gamma = gen.gamma(gamma_a, gamma_b);
 
       //-------------------------------------------------
       // Save MCMC output.
