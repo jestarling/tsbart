@@ -360,18 +360,18 @@ List tsbartProbit(arma::vec y,      // True latent variable values of the respon
 
          seta_sfy = 0.0; seta_sf2 = 0.0;
          for(size_t k=0;k<n;k++) {
-            // seta_sfy += allfit[k] * y[k];
-            // seta_sf2 += allfit[k] * allfit[k];
-            seta_sfy += (allfit[k]/pi.eta)*y[k];
-            seta_sf2 += (allfit[k]/pi.eta)*(allfit[k]/pi.eta);
+            seta_sfy += allfit[k] * y[k];
+            seta_sf2 += allfit[k] * allfit[k];
+            //seta_sfy += (allfit[k]/pi.eta)*y[k];
+            //seta_sf2 += (allfit[k]/pi.eta)*(allfit[k]/pi.eta);
          }
 
          // Calculate variance and mean for eta full conditional.
          // With eta ~ N(con_sd, gamma2) to make con_sd the C+ prior's median.
-         //seta_var = 1 / (1 / (pi.gamma * pi.gamma) + seta_sf2 / (pi.eta*pi.eta*sighat*sighat));
-         //seta_mean = seta_var * (con_sd/(pi.gamma*pi.gamma) + seta_sfy/(pi.eta*sighat*sighat));
-         seta_var = 1 / (1/(pi.gamma*pi.gamma) + seta_sf2/(sighat*sighat));
-         seta_mean = seta_var * (con_sd/(pi.gamma*pi.gamma) + seta_sfy/(sighat*sighat));
+         seta_var = 1 / (1 / (pi.gamma * pi.gamma) + seta_sf2 / (pi.eta*pi.eta*sighat*sighat));
+         seta_mean = seta_var * (con_sd/(pi.gamma*pi.gamma) + seta_sfy/(pi.eta*sighat*sighat));
+         //seta_var = 1 / (1/(pi.gamma*pi.gamma) + seta_sf2/(sighat*sighat));
+         //eta_mean = seta_var * (con_sd/(pi.gamma*pi.gamma) + seta_sfy/(sighat*sighat));
 
          // Draw normal full conditional for eta.
          double eta_old = pi.eta; // Save previous eta before drawing new one, for adjusting scaling.
