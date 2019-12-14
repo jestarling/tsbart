@@ -138,12 +138,12 @@ double lilhet_ts(double n0, double n, vec n_vec, vec sy_vec, double sy2, vec mu0
 
    // Calculate log-likelihood.  Note: mu0.t()*K*mu0 excluded as cancels in ratios.
    double ll = - .5*n0*log(2*PI)
-               + .5*n // This is the .5 * log(det(Lambda)) term, where Lambda=diag(w).
-               + .5*log(det(Prec0))
-               - .5*log(det(C))
-               - as_scalar(.5*(sy2 - b.t()*C.i()*b));
+      + .5*n // This is the .5 * log(det(Lambda)) term, where Lambda=diag(w).
+      + .5*log(det(Prec0))
+      - .5*log(det(C))
+      - as_scalar(.5*(sy2 - b.t()*C.i()*b));
 
-   return(ll);
+      return(ll);
 }
 
 
@@ -166,7 +166,7 @@ void allsuff_ts(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv, std::vector<sinfo
    x.getbots(bnv);   // Save bottom nodes for x to bnv variable.
 
    typedef tree::npv::size_type bvsz;  // Is a better C way to set type.  (tree::npv::size_type) will resolve to an integer,
-                                       // or long int, etc.  We don't have to know that ahead of time by using this notation.
+   // or long int, etc.  We don't have to know that ahead of time by using this notation.
    bvsz nb = bnv.size();   // Initialize new var nb of type bvsz for number of bottom nodes, then...
    sv.resize(nb);          // Re-sizing suff stat vector to have same size as bottom nodes.
 
@@ -500,7 +500,7 @@ void drmu(tree& t, xinfo& xi, dinfo& di, pinfo& pi, RNG& gen)
 
       // Check for NA result.
       if(sum(bnv[i]->getm() == bnv[i]->getm()) == 0) {
-          Rcpp::stop("drmu failed");
+         Rcpp::stop("drmu failed");
       }
    }
 }
@@ -541,8 +541,8 @@ void drmuhet(tree& t, xinfo& xi, dinfo& di, double* phi, pinfo& pi, RNG& gen)
 // normal density N(x, mean, variance)
 double pn(double x, double m, double v)
 {
-	double dif = x-m;
-	return exp(-.5*dif*dif/v)/sqrt(2*PI*v);
+   double dif = x-m;
+   return exp(-.5*dif*dif/v)/sqrt(2*PI*v);
 }
 
 //--------------------------------------------------
@@ -550,97 +550,97 @@ double pn(double x, double m, double v)
 int rdisc(double *p, RNG& gen)
 {
 
-	double sum;
-	double u = gen.uniform();
+   double sum;
+   double u = gen.uniform();
 
-    int i=0;
-    sum=p[0];
-    while(sum<u) {
-		i += 1;
-		sum += p[i];
-    }
-    return i;
+   int i=0;
+   sum=p[0];
+   while(sum<u) {
+      i += 1;
+      sum += p[i];
+   }
+   return i;
 }
 
 //--------------------------------------------------
 //evalute tree tr on grid given by xi and write to os
 void grm(tree& tr, xinfo& xi, std::ostream& os)
 {
-	size_t p = xi.size();
-	if(p!=2) {
-		cout << "error in grm, p !=2\n";
-		return;
-	}
-	size_t n1 = xi[0].size();
-	size_t n2 = xi[1].size();
-	tree::tree_cp bp; //pointer to bottom node
-	double *x = new double[2];
-	for(size_t i=0;i!=n1;i++) {
-		for(size_t j=0;j!=n2;j++) {
-			x[0] = xi[0][i];
-			x[1] = xi[1][j];
-			bp = tr.bn(x,xi);
-			os << x[0] << " " << x[1] << " " << bp->getm() << " " << bp->nid() << endl;
-		}
-	}
-	delete[] x;
+   size_t p = xi.size();
+   if(p!=2) {
+      cout << "error in grm, p !=2\n";
+      return;
+   }
+   size_t n1 = xi[0].size();
+   size_t n2 = xi[1].size();
+   tree::tree_cp bp; //pointer to bottom node
+   double *x = new double[2];
+   for(size_t i=0;i!=n1;i++) {
+      for(size_t j=0;j!=n2;j++) {
+         x[0] = xi[0][i];
+         x[1] = xi[1][j];
+         bp = tr.bn(x,xi);
+         os << x[0] << " " << x[1] << " " << bp->getm() << " " << bp->nid() << endl;
+      }
+   }
+   delete[] x;
 }
 
 //--------------------------------------------------
 //does this bottom node n have any variables it can split on.
 bool cansplit(tree::tree_p n, xinfo& xi)
 {
-	int L,U;
-	bool v_found = false; //have you found a variable you can split on
-	size_t v=0;
-	while(!v_found && (v < xi.size())) { //invar: splitvar not found, vars left
-		L=0; U = xi[v].size()-1;
-		n->rg(v,&L,&U);
-		if(U>=L) v_found=true;
-		v++;
-	}
-	return v_found;
+   int L,U;
+   bool v_found = false; //have you found a variable you can split on
+   size_t v=0;
+   while(!v_found && (v < xi.size())) { //invar: splitvar not found, vars left
+      L=0; U = xi[v].size()-1;
+      n->rg(v,&L,&U);
+      if(U>=L) v_found=true;
+      v++;
+   }
+   return v_found;
 }
 
 //--------------------------------------------------
 //compute prob of a birth, goodbots will contain all the good bottom nodes
 double getpb(tree& t, xinfo& xi, pinfo& pi, tree::npv& goodbots)
 {
-	double pb;  //prob of birth to be returned
-	tree::npv bnv; //all the bottom nodes
-	t.getbots(bnv);
-	for(size_t i=0;i!=bnv.size();i++)
-		if(cansplit(bnv[i],xi)) goodbots.push_back(bnv[i]);
-	if(goodbots.size()==0) { //are there any bottom nodes you can split on?
-		pb=0.0;
-	} else {
-		if(t.treesize()==1) pb=1.0; //is there just one node?
-		else pb=pi.pb;
-	}
-	return pb;
+   double pb;  //prob of birth to be returned
+   tree::npv bnv; //all the bottom nodes
+   t.getbots(bnv);
+   for(size_t i=0;i!=bnv.size();i++)
+      if(cansplit(bnv[i],xi)) goodbots.push_back(bnv[i]);
+      if(goodbots.size()==0) { //are there any bottom nodes you can split on?
+         pb=0.0;
+      } else {
+         if(t.treesize()==1) pb=1.0; //is there just one node?
+         else pb=pi.pb;
+      }
+      return pb;
 }
 
 //--------------------------------------------------
 //find variables n can split on, put their indices in goodvars
 void getgoodvars(tree::tree_p n, xinfo& xi,  std::vector<size_t>& goodvars)
 {
-	int L,U;
-	for(size_t v=0;v!=xi.size();v++) {//try each variable
-		L=0; U = xi[v].size()-1;
-		n->rg(v,&L,&U);
-		if(U>=L) goodvars.push_back(v);
-	}
+   int L,U;
+   for(size_t v=0;v!=xi.size();v++) {//try each variable
+      L=0; U = xi[v].size()-1;
+      n->rg(v,&L,&U);
+      if(U>=L) goodvars.push_back(v);
+   }
 }
 
 //--------------------------------------------------
 //get prob a node grows, 0 if no good vars, else alpha/(1+d)^beta
 double pgrow(tree::tree_p n, xinfo& xi, pinfo& pi)
 {
-	if(cansplit(n,xi)) {
-		return pi.alpha/pow(1.0+n->depth(),pi.beta);
-	} else {
-		return 0.0;
-	}
+   if(cansplit(n,xi)) {
+      return pi.alpha/pow(1.0+n->depth(),pi.beta);
+   } else {
+      return 0.0;
+   }
 }
 
 //--------------------------------------------------
@@ -648,32 +648,32 @@ double pgrow(tree::tree_p n, xinfo& xi, pinfo& pi)
 //get counts for all bottom nodes
 std::vector<int> counts(tree& x, xinfo& xi, dinfo& di, tree::npv& bnv)
 {
-  tree::tree_cp tbn; //the pointer to the bottom node for the current observations
-	size_t ni;         //the  index into vector of the current bottom node
-	double *xx;        //current x
-	double y;          //current y
+   tree::tree_cp tbn; //the pointer to the bottom node for the current observations
+   size_t ni;         //the  index into vector of the current bottom node
+   double *xx;        //current x
+   double y;          //current y
 
-	bnv.clear();
-	x.getbots(bnv);
+   bnv.clear();
+   x.getbots(bnv);
 
-	typedef tree::npv::size_type bvsz;
-//	bvsz nb = bnv.size();
+   typedef tree::npv::size_type bvsz;
+   //	bvsz nb = bnv.size();
 
-  std::vector<int> cts(bnv.size(), 0);
+   std::vector<int> cts(bnv.size(), 0);
 
-	std::map<tree::tree_cp,size_t> bnmap;
-	for(bvsz i=0;i!=bnv.size();i++) bnmap[bnv[i]]=i;
+   std::map<tree::tree_cp,size_t> bnmap;
+   for(bvsz i=0;i!=bnv.size();i++) bnmap[bnv[i]]=i;
 
-	for(size_t i=0;i<di.n;i++) {
-		xx = di.x + i*di.p;
-		y=di.y[i];
+   for(size_t i=0;i<di.n;i++) {
+      xx = di.x + i*di.p;
+      y=di.y[i];
 
-		tbn = x.bn(xx,xi);
-		ni = bnmap[tbn];
+      tbn = x.bn(xx,xi);
+      ni = bnmap[tbn];
 
-    cts[ni] += 1;
-	}
-  return(cts);
+      cts[ni] += 1;
+   }
+   return(cts);
 }
 
 void update_counts(int i, std::vector<int>& cts, tree& x, xinfo& xi,
@@ -681,24 +681,24 @@ void update_counts(int i, std::vector<int>& cts, tree& x, xinfo& xi,
                    tree::npv& bnv, //vector of pointers to bottom nodes
                    int sign)
 {
-  tree::tree_cp tbn; //the pointer to the bottom node for the current observations
-  size_t ni;         //the  index into vector of the current bottom node
-	double *xx;        //current x
-	double y;          //current y
+   tree::tree_cp tbn; //the pointer to the bottom node for the current observations
+   size_t ni;         //the  index into vector of the current bottom node
+   double *xx;        //current x
+   double y;          //current y
 
-	typedef tree::npv::size_type bvsz;
-//	bvsz nb = bnv.size();
+   typedef tree::npv::size_type bvsz;
+   //	bvsz nb = bnv.size();
 
-	std::map<tree::tree_cp,size_t> bnmap;
-	for(bvsz ii=0;ii!=bnv.size();ii++) bnmap[bnv[ii]]=ii; // bnmap[pointer] gives linear index
+   std::map<tree::tree_cp,size_t> bnmap;
+   for(bvsz ii=0;ii!=bnv.size();ii++) bnmap[bnv[ii]]=ii; // bnmap[pointer] gives linear index
 
-	xx = di.x + i*di.p;
-	y=di.y[i];
+   xx = di.x + i*di.p;
+   y=di.y[i];
 
-	tbn = x.bn(xx,xi);
-	ni = bnmap[tbn];
+   tbn = x.bn(xx,xi);
+   ni = bnmap[tbn];
 
-  cts[ni] += sign;
+   cts[ni] += sign;
 }
 
 void update_counts(int i, std::vector<int>& cts, tree& x, xinfo& xi,
@@ -706,24 +706,24 @@ void update_counts(int i, std::vector<int>& cts, tree& x, xinfo& xi,
                    std::map<tree::tree_cp,size_t>& bnmap,
                    int sign)
 {
-  tree::tree_cp tbn; //the pointer to the bottom node for the current observations
-  size_t ni;         //the  index into vector of the current bottom node
-  double *xx;        //current x
-	double y;          //current y
-  /*
-	typedef tree::npv::size_type bvsz;
-	bvsz nb = bnv.size();
+   tree::tree_cp tbn; //the pointer to the bottom node for the current observations
+   size_t ni;         //the  index into vector of the current bottom node
+   double *xx;        //current x
+   double y;          //current y
+   /*
+   typedef tree::npv::size_type bvsz;
+   bvsz nb = bnv.size();
 
-	std::map<tree::tree_cp,size_t> bnmap;
-	for(bvsz ii=0;ii!=bnv.size();ii++) bnmap[bnv[ii]]=ii; // bnmap[pointer] gives linear index
-	*/
-	xx = di.x + i*di.p;
-	y=di.y[i];
+   std::map<tree::tree_cp,size_t> bnmap;
+   for(bvsz ii=0;ii!=bnv.size();ii++) bnmap[bnv[ii]]=ii; // bnmap[pointer] gives linear index
+   */
+   xx = di.x + i*di.p;
+   y=di.y[i];
 
-	tbn = x.bn(xx,xi);
-	ni = bnmap[tbn];
+   tbn = x.bn(xx,xi);
+   ni = bnmap[tbn];
 
-  cts[ni] += sign;
+   cts[ni] += sign;
 }
 
 
@@ -732,42 +732,42 @@ void update_counts(int i, std::vector<int>& cts, tree& x, xinfo& xi,
                    std::map<tree::tree_cp,size_t>& bnmap,
                    int sign,
                    tree::tree_cp &tbn
-                   )
+)
 {
-  //tree::tree_cp tbn; //the pointer to the bottom node for the current observations
-  size_t ni;         //the  index into vector of the current bottom node
-  double *xx;        //current x
-  double y;          //current y
-  /*
-	typedef tree::npv::size_type bvsz;
-	bvsz nb = bnv.size();
+   //tree::tree_cp tbn; //the pointer to the bottom node for the current observations
+   size_t ni;         //the  index into vector of the current bottom node
+   double *xx;        //current x
+   double y;          //current y
+   /*
+   typedef tree::npv::size_type bvsz;
+   bvsz nb = bnv.size();
 
-	std::map<tree::tree_cp,size_t> bnmap;
-	for(bvsz ii=0;ii!=bnv.size();ii++) bnmap[bnv[ii]]=ii; // bnmap[pointer] gives linear index
-	*/
-	xx = di.x + i*di.p;
-	y=di.y[i];
+   std::map<tree::tree_cp,size_t> bnmap;
+   for(bvsz ii=0;ii!=bnv.size();ii++) bnmap[bnv[ii]]=ii; // bnmap[pointer] gives linear index
+   */
+   xx = di.x + i*di.p;
+   y=di.y[i];
 
-	tbn = x.bn(xx,xi);
-	ni = bnmap[tbn];
+   tbn = x.bn(xx,xi);
+   ni = bnmap[tbn];
 
-  cts[ni] += sign;
+   cts[ni] += sign;
 }
 
 bool min_leaf(int minct, std::vector<tree>& t, xinfo& xi, dinfo& di) {
-  bool good = true;
-  tree::npv bnv;
-  std::vector<int> cts;
-  int m = 0;
-  for (size_t tt=0; tt<t.size(); ++tt) {
-    cts = counts(t[tt], xi, di, bnv);
-    m = std::min(m, *std::min_element(cts.begin(), cts.end()));
-    if(m<minct) {
-      good = false;
-      break;
-    }
-  }
-  return good;
+   bool good = true;
+   tree::npv bnv;
+   std::vector<int> cts;
+   int m = 0;
+   for (size_t tt=0; tt<t.size(); ++tt) {
+      cts = counts(t[tt], xi, di, bnv);
+      m = std::min(m, *std::min_element(cts.begin(), cts.end()));
+      if(m<minct) {
+         good = false;
+         break;
+      }
+   }
+   return good;
 }
 
 //--------------------------------------------------
@@ -812,85 +812,85 @@ void fit(tree& t, xinfo& xi, dinfo& di, double* fv)
 //partition
 void partition(tree& t, xinfo& xi, dinfo& di, std::vector<size_t>& pv)
 {
-	double *xx;
-	tree::tree_cp bn;
-	pv.resize(di.n);
-	for(size_t i=0;i<di.n;i++) {
-		xx = di.x + i*di.p;
-		bn = t.bn(xx,xi);
-		pv[i] = bn->nid();
-	}
+   double *xx;
+   tree::tree_cp bn;
+   pv.resize(di.n);
+   for(size_t i=0;i<di.n;i++) {
+      xx = di.x + i*di.p;
+      bn = t.bn(xx,xi);
+      pv[i] = bn->nid();
+   }
 }
 
 //--------------------------------------------------
 //write cutpoint information to screen
 void prxi(xinfo& xi)
 {
-	cout << "xinfo: \n";
-	for(size_t v=0;v!=xi.size();v++) {
-		cout << "v: " << v << endl;
-		for(size_t j=0;j!=xi[v].size();j++) cout << "j,xi[v][j]: " << j << ", " << xi[v][j] << endl;
-	}
-	cout << "\n\n";
+   cout << "xinfo: \n";
+   for(size_t v=0;v!=xi.size();v++) {
+      cout << "v: " << v << endl;
+      for(size_t j=0;j!=xi[v].size();j++) cout << "j,xi[v][j]: " << j << ", " << xi[v][j] << endl;
+   }
+   cout << "\n\n";
 }
 
 //--------------------------------------------------
 //make xinfo = cutpoints
 void makexinfo(size_t p, size_t n, double *x, xinfo& xi, size_t nc)
 {
-	double xinc;
+   double xinc;
 
-	//compute min and max for each x
-	std::vector<double> minx(p,INFINITY);
-	std::vector<double> maxx(p,-INFINITY);
-	double xx;
-	for(size_t i=0;i<p;i++) {
-		for(size_t j=0;j<n;j++) {
-			xx = *(x+p*j+i);
-			if(xx < minx[i]) minx[i]=xx;
-			if(xx > maxx[i]) maxx[i]=xx;
-		}
-	}
-	//make grid of nc cutpoints between min and max for each x.
-	xi.resize(p);
-	for(size_t i=0;i<p;i++) {
-		xinc = (maxx[i]-minx[i])/(nc+1.0);
-		xi[i].resize(nc);
-		for(size_t j=0;j<nc;j++) xi[i][j] = minx[i] + (j+1)*xinc;
-	}
+   //compute min and max for each x
+   std::vector<double> minx(p,INFINITY);
+   std::vector<double> maxx(p,-INFINITY);
+   double xx;
+   for(size_t i=0;i<p;i++) {
+      for(size_t j=0;j<n;j++) {
+         xx = *(x+p*j+i);
+         if(xx < minx[i]) minx[i]=xx;
+         if(xx > maxx[i]) maxx[i]=xx;
+      }
+   }
+   //make grid of nc cutpoints between min and max for each x.
+   xi.resize(p);
+   for(size_t i=0;i<p;i++) {
+      xinc = (maxx[i]-minx[i])/(nc+1.0);
+      xi[i].resize(nc);
+      for(size_t j=0;j<nc;j++) xi[i][j] = minx[i] + (j+1)*xinc;
+   }
 }
 // get min/max needed to make cutpoints
 void makeminmax(size_t p, size_t n, double *x, std::vector<double> &minx, std::vector<double> &maxx)
 {
-	double xx;
+   double xx;
 
-	for(size_t i=0;i<p;i++) {
-		for(size_t j=0;j<n;j++) {
-			xx = *(x+p*j+i);
-			if(xx < minx[i]) minx[i]=xx;
-			if(xx > maxx[i]) maxx[i]=xx;
-		}
-	}
+   for(size_t i=0;i<p;i++) {
+      for(size_t j=0;j<n;j++) {
+         xx = *(x+p*j+i);
+         if(xx < minx[i]) minx[i]=xx;
+         if(xx > maxx[i]) maxx[i]=xx;
+      }
+   }
 }
 //make xinfo = cutpoints give the minx and maxx vectors
 void makexinfominmax(size_t p, xinfo& xi, size_t nc, std::vector<double> &minx, std::vector<double> &maxx)
 {
-	double xinc;
-	//make grid of nc cutpoints between min and max for each x.
-	xi.resize(p);
-	for(size_t i=0;i<p;i++) {
-		xinc = (maxx[i]-minx[i])/(nc+1.0);
-		xi[i].resize(nc);
-		for(size_t j=0;j<nc;j++) xi[i][j] = minx[i] + (j+1)*xinc;
-	}
+   double xinc;
+   //make grid of nc cutpoints between min and max for each x.
+   xi.resize(p);
+   for(size_t i=0;i<p;i++) {
+      xinc = (maxx[i]-minx[i])/(nc+1.0);
+      xi[i].resize(nc);
+      for(size_t j=0;j<nc;j++) xi[i][j] = minx[i] + (j+1)*xinc;
+   }
 }
 
 // Check if a vector is sorted.  For checking z and zpred for causal funbart.
 bool is_sort(arma::vec x) {
-     int n=x.n_elem;
-     for (int i=0; i<n-1; ++i)
-         if (x[i] < x[i+1]) return false;
-     return true;
+   int n=x.n_elem;
+   for (int i=0; i<n-1; ++i)
+      if (x[i] < x[i+1]) return false;
+      return true;
 }
 
 // //--------------------------------------------------

@@ -6,7 +6,9 @@ tsbart(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200,
                    lambda=NULL, sigq=.9, sighat=NULL, nu=3,
                    ecross=1, base_tree=.95, power_tree=2,
                    sd_control=sd(y), use_fscale=TRUE,
-                   probit=FALSE, yobs=NULL, verbose=T, mh=F, save_inputs=T)
+                   probit=FALSE, yobs=NULL, verbose=T,
+                   mh=F, save_inputs=T, monotone="no",
+                   binsize=NULL)
 }
 \arguments{
 \item{y}{Length n vector with continuous response values.  In probit case, should contain initializations for latent variables.}
@@ -53,6 +55,10 @@ tsbart(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200,
 
 \item{save_inputs}{Boolean for saving user inputs.  If true, output includes the inputs dataframe.}
 
+\item{monotone}{For Projective Smooth BART. Specifies type of monotonicity constraint on f(x,t) estimates.  If "no", no monotonicity constraint.  If "incr" or "decr", f(x,t) is monotone increasing or decreasing.  Default is "no".}
+
+\item{binsize}{Specifies a value $c$ where (y_i mod c == 0) indicates that y_i may have been rounded to this bin size.}
+
 }
 \value{
 A list containing the following items:
@@ -70,6 +76,11 @@ A list containing the following items:
 \item{gamma}{A vector containing the MCMC draws for gamma.}
 
 \item{ecross}{The expected number of crossings.}
+
+\item{y_potentially_rounded_indicator}{A vector of 0/1 values, indicating which y_i's are treated as potentially
+rounded.  Only included if binsize is not NULL.}
+
+\item{y_imputed}{A of y values, where the y_i's for which rounding_indicator_i==1 are drawn from the truncated normal distribution.  Only included if binsize is not NULL.}
 
 \item{metrop}{A ((nburn + nsim)*ntree x 5) dataframe of tree proposal details.  Included if mh=TRUE.  Columns are:
     iter (MCMC iteration number, from 1 to nburn+nsim),
@@ -94,7 +105,8 @@ Function call example is as follows.
 fit = tsbart(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200, lambda=NULL, sigq=.9, sighat=NULL,
                nu=3, ecross=1, base_tree=.95, base_tree=.95, power_tree=2,
                sd_control=sd(y), use_fscale=TRUE,
-               probit=F, yobs=NULL, verbose=T, mh=F, save_inputs=T)
+               probit=F, yobs=NULL, verbose=T, mh=F, save_inputs=T, monotone="no",
+               binsize=NULL)
 }}
 \author{
 Jennifer E. Starling

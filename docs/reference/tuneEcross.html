@@ -121,7 +121,8 @@
                       <span class='no'>y</span>, <span class='no'>tgt</span>, <span class='no'>x</span>, <span class='kw'>nburn</span><span class='kw'>=</span><span class='fl'>1000</span>, <span class='kw'>nsim</span><span class='kw'>=</span><span class='fl'>1000</span>, <span class='kw'>ntree</span><span class='kw'>=</span><span class='fl'>200</span>,
                       <span class='kw'>lambda</span><span class='kw'>=</span><span class='kw'>NULL</span>, <span class='kw'>sigq</span><span class='kw'>=</span><span class='fl'>.9</span>, <span class='kw'>sighat</span><span class='kw'>=</span><span class='kw'>NULL</span>, <span class='kw'>nu</span><span class='kw'>=</span><span class='fl'>3</span>,
                       <span class='kw'>ecross</span><span class='kw'>=</span><span class='fl'>1</span>, <span class='kw'>base_tree</span><span class='kw'>=</span><span class='fl'>.95</span>, <span class='kw'>power_tree</span><span class='kw'>=</span><span class='fl'>2</span>,
-                      <span class='kw'>probit</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>yobs</span><span class='kw'>=</span><span class='kw'>NULL</span>)</pre>
+                      <span class='kw'>probit</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>yobs</span><span class='kw'>=</span><span class='kw'>NULL</span>, <span class='kw'>monotone</span><span class='kw'>=</span><span class='st'>"no"</span>,
+                      <span class='kw'>binsize</span><span class='kw'>=</span><span class='kw'>NULL</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -186,6 +187,14 @@
       <th>yobs</th>
       <td><p>Length n vector of binary responses; only populated for probit=1 case.</p></td>
     </tr>
+    <tr>
+      <th>monotone</th>
+      <td><p>For Projective Smooth BART. Specifies type of monotonicity constraint on f(x,t) estimates.  If "no", no monotonicity constraint.  If "incr" or "decr", f(x,t) is monotone increasing or decreasing.  Default is "no".</p></td>
+    </tr>
+    <tr>
+      <th>binsize</th>
+      <td><p>Specifies a value $c$ where (y_i mod c == 0) indicates that y_i may have been rounded to this bin size.</p></td>
+    </tr>
     </table>
     
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
@@ -207,7 +216,8 @@
                       <span class='no'>y</span>, <span class='no'>tgt</span>, <span class='no'>x</span>, <span class='no'>nburn</span>, <span class='no'>nsim</span>, <span class='kw'>ntree</span><span class='kw'>=</span><span class='fl'>200</span>,
                       <span class='kw'>lambda</span><span class='kw'>=</span><span class='kw'>NULL</span>, <span class='kw'>sigq</span><span class='kw'>=</span><span class='fl'>.9</span>, <span class='kw'>sighat</span><span class='kw'>=</span><span class='kw'>NULL</span>, <span class='kw'>nu</span><span class='kw'>=</span><span class='fl'>3</span>,
                       <span class='kw'>ecross</span><span class='kw'>=</span><span class='fl'>1</span>, <span class='kw'>base_tree</span><span class='kw'>=</span><span class='fl'>.95</span>, <span class='kw'>power_tree</span><span class='kw'>=</span><span class='fl'>2</span>,
-                      <span class='kw'>probit</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>yobs</span><span class='kw'>=</span><span class='kw'>NULL</span>)
+                      <span class='kw'>probit</span><span class='kw'>=</span><span class='fl'>FALSE</span>, <span class='kw'>yobs</span><span class='kw'>=</span><span class='kw'>NULL</span>, <span class='kw'>monotone</span><span class='kw'>=</span><span class='st'>"no"</span>,
+                      <span class='kw'>binsize</span><span class='kw'>=</span><span class='kw'>NULL</span>)
 
 <span class='co'>## View expected number of crossings.</span>
 <span class='no'>ecrossTune</span><span class='kw'>[[</span><span class='st'>"ecross_opt"</span>]]

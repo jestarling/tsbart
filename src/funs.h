@@ -12,7 +12,7 @@
 using namespace arma;
 
 inline double logsumexp(const double &a, const double &b){
-  return a < b ? b + log(1.0 + exp(a - b)) : a + log(1.0 + exp(b - a));
+   return a < b ? b + log(1.0 + exp(a - b)) : a + log(1.0 + exp(b - a));
 }
 
 using std::cout;
@@ -74,15 +74,15 @@ void getsuffhet_ts(tree& x, tree::tree_cp nl, tree::tree_cp nr, xinfo& xi, dinfo
 //--------------------------------------------------
 //normal density
 double pn(
-   double x,    //variate
-   double m,    //mean
-   double v     //variance
+      double x,    //variate
+      double m,    //mean
+      double v     //variance
 );
 //--------------------------------------------------
 //draw from a discrete distribution
 int rdisc(
-   double *p,   //vector of probabilities
-   RNG& gen     //random number generator
+      double *p,   //vector of probabilities
+      RNG& gen     //random number generator
 );
 //--------------------------------------------------
 //evaluate tree tr on grid xi, write to os
@@ -127,47 +127,80 @@ void fit(tree& t, xinfo& xi, dinfo& di, double* fv);
 template<class T>
 double fit_i(T i, tree& t, xinfo& xi, dinfo& di)
 {
-  double *xx;
-  double fv = 0.0;
-  tree::tree_cp bn;
-  xx = di.x + i*di.p;
-  //for (size_t j=0; j<t.size(); ++j) {
-  bn = t.bn(xx,xi);
-  fv = bn -> getm(di.t[i],di.tref);
-  //fv = as_scalar(bn->getm(di.t[i]));
+   double *xx;
+   double fv = 0.0;
+   tree::tree_cp bn;
+   xx = di.x + i*di.p;
+   //for (size_t j=0; j<t.size(); ++j) {
+   bn = t.bn(xx,xi);
+   fv = bn -> getm(di.t[i],di.tref);
+   //fv = as_scalar(bn->getm(di.t[i]));
 
-  //}
-  return fv;
+   //}
+   return fv;
 }
 
 template<class T>
 double fit_i(T i, std::vector<tree>& t, xinfo& xi, dinfo& di)
 {
-  double *xx;
-  double fv = 0.0;
-  tree::tree_cp bn;
-  xx = di.x + i*di.p;
-  for (size_t j=0; j<t.size(); ++j) {
-		bn = t[j].bn(xx,xi);
-		fv += bn -> getm(di.t[i],di.tref);   // UPDATED, WAS (); in parens instead of (*di.t)
-  }
+   double *xx;
+   double fv = 0.0;
+   tree::tree_cp bn;
+   xx = di.x + i*di.p;
+   for (size_t j=0; j<t.size(); ++j) {
+      bn = t[j].bn(xx,xi);
+      fv += bn -> getm(di.t[i],di.tref);   // UPDATED, WAS (); in parens instead of (*di.t)
+   }
 
-  return fv;
+   return fv;
+}
+
+// Add a new version of the previous function to perform scaling and add back in overall alpha_t means, as in fit_i_pava, for consistency.
+template<class T>
+double fit_i(T i, std::vector<tree>& t, xinfo& xi, dinfo& di, vec& alpha_t, double& muscale)
+{
+   double *xx;
+   double fv = 0.0;
+   tree::tree_cp bn;
+   xx = di.x + i*di.p;
+
+   // Define a new mu vector to track the entire t trajectory for the corresponding xi.
+   // Start with the alpha_t value, then add fits.
+   vec mu = alpha_t;
+
+   for (size_t j=0; j<t.size(); ++j) {
+      bn = t[j].bn(xx,xi);
+      mu += bn -> getm();   // Get mu vec for bottom node, and add to running sum.
+   }
+
+   // Multiply mu by scaling factor.
+   mu = mu * muscale;
+
+   // Find vec index and return fitted value (fv).
+   uvec idx = find(di.tref==di.t[i]);
+   fv = as_scalar(mu(idx));
+
+   return fv;
 }
 
 template<class T>
 double fit_i_mult(T i, std::vector<tree>& t, xinfo& xi, dinfo& di)
 {
-  double *xx;
-  double fv = 1.0;
-  tree::tree_cp bn;
-  xx = di.x + i*di.p;
-  for (size_t j=0; j<t.size(); ++j) {
-  	bn = t[j].bn(xx,xi);
-		fv *= bn -> getm(di.t[i],di.tref);     // UPDATED, WAS (); in parens instead of (*di.t)
-  }
-  return fv;
+   double *xx;
+   double fv = 1.0;
+   tree::tree_cp bn;
+   xx = di.x + i*di.p;
+   for (size_t j=0; j<t.size(); ++j) {
+      bn = t[j].bn(xx,xi);
+      fv *= bn -> getm(di.t[i],di.tref);     // UPDATED, WAS (); in parens instead of (*di.t)
+   }
+   return fv;
 }
+
+
+
+
+
 //--------------------------------------------------
 //partition
 void partition(tree& t, xinfo& xi, dinfo& di, std::vector<size_t>& pv);

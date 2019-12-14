@@ -14,12 +14,23 @@
    return( all( out ) )
 }
 
+### Rounds to nearest value.
+round_to <- function(x, b) {
+   round(x/b)*b
+}
+
+### For testing equality.
+test_eq <- function(a,b){
+   abs(a - b) < .001
+}
+
 tsbart <- function(y, tgt, x, tpred=NULL, xpred=NULL,
                    nburn=100, nsim=1000, ntree=200,
                    lambda=NULL, sigq=.9, sighat=NULL, nu=3,
                    ecross=1, base_tree=.95, power_tree=2, sd_control = 2*sd(y),
                    use_fscale=TRUE,
-                   probit=FALSE, yobs=NULL, verbose=T, mh=F, save_inputs=T){
+                   probit=FALSE, yobs=NULL, verbose=T, mh=F, save_inputs=T,
+                   monotone="no", binsize=NULL){
 
    ################################################################
    # Capture key arguments.
@@ -39,7 +50,9 @@ tsbart <- function(y, tgt, x, tpred=NULL, xpred=NULL,
                 'use_fscale',
                 'probit',
                 'verbose',
-                'mh'),
+                'mh',
+                'monotone',
+                'binsize'),
       'value' = c(ifelse(is.null(nburn),"NULL",nburn),
                   ifelse(is.null(nsim),"NULL",nsim),
                   ifelse(is.null(ntree),"NULL",ntree),
@@ -54,7 +67,9 @@ tsbart <- function(y, tgt, x, tpred=NULL, xpred=NULL,
                   ifelse(is.null(use_fscale),"NULL",use_fscale),
                   ifelse(is.null(probit),"NULL",probit),
                   ifelse(is.null(verbose),"NULL",verbose),
-                  ifelse(is.null(mh),"NULL",mh))
+                  ifelse(is.null(mh),"NULL",mh),
+                  ifelse(is.null(monotone),"NULL",monotone),
+                  ifelse(is.null(binsize),"NULL",binsize))
    )
 
    ################################################################
@@ -150,7 +165,17 @@ tsbart <- function(y, tgt, x, tpred=NULL, xpred=NULL,
    if(class(ecross)=="character" & ecross!="tune") stop("ecross must be a positive value or set to 'tune', case-sensitive.")
    #if(save_trees==T & is.null(tree_fname)) stop('If save_trees=TRUE, must spply a filename.')
 
+   #---------------------------------------------------------------
+   # Monotonicity and heaping bias for potentially rounded y's.
+   #---------------------------------------------------------------
 
+   # monotone must be NULL, or "incr", or "decr".
+   if(!monotone %in% c('no','incr','decr')) stop("monotone must be 'no', 'incr', or 'decr'.")
+
+   if(!is.null(binsize)){
+      if((class(binsize)!="numeric") | (binsize<=0)) stop('binsize must be a positive numeric scalar, ex: 10,50, or 100.')
+      if(length(binsize)>1) stop('binsize must be a positive numeric scalar, ex: 10,50, or 100.')
+   }
 
    ################################################################
    # Order data frame in ascending order of t value.
@@ -159,6 +184,27 @@ tsbart <- function(y, tgt, x, tpred=NULL, xpred=NULL,
    perm = order(tgt, decreasing=FALSE)
    perm_oos = order(tpred, decreasing=FALSE)
 
+   ################################################################
+   # Calculate rounding half-bound-width and rounding indicators for binsize heaping
+   # bias.
+   ################################################################
+
+   # Initialize rounding vectors.
+   rounding_ind = 0
+   rounding_halfWidth = 0
+
+   # If binsize is provided, populate rounding details.
+   if(!is.null(binsize)){
+
+      # Vector of indicators for which observations may be rounded, based on cutoff binsize.
+      rounding_ind = ifelse( test_eq( round_to(y,binsize), y), 1, 0)
+
+      print(paste0('y potentially rounded to nearest ', binsize,'.'))
+      print(paste0(sum(rounding_ind), ' potentially rounded observations (', round(sum(rounding_ind)/length(rounding_ind),3),' of obs)'))
+
+      # Scalar c/2 bound half-widths for each observation. (Same for all obs, such as 100g/2.)
+      rounding_halfWidth = binsize/2
+   }
 
    ################################################################
    # Create model matrix and set up hyperparameters.
@@ -168,6 +214,11 @@ tsbart <- function(y, tgt, x, tpred=NULL, xpred=NULL,
    ybar = mean(y)
    ysd = sd(y)
    y = (y - ybar) / ysd
+
+   # Scale rounding bound half-width c/2.
+   if(!is.null(binsize)){
+      rounding_halfWidth = rounding_halfWidth / ysd
+   }
 
    # Model matrix.
    xx = tsbart::makeModelMatrix(x)
@@ -201,17 +252,18 @@ tsbart <- function(y, tgt, x, tpred=NULL, xpred=NULL,
    ################################################################
    if(ecross=="tune"){
       tuned = tuneEcross(ecross_candidates = seq(.25,5,by=.25),
-                         y[perm], tgt[perm], x[perm,],
+                         y[perm], tgt[perm], tpred[perm_oos], x[perm,], xpred[perm_oos,],
                          nburn=500, nsim=500, ntree=200,
                          lambda, sigq, sighat, nu,
                          base_tree, power_tree,
-                         probit, yobs[perm])
+                         probit, yobs[perm], monotone=monotone)
       ecross = tuned$ecross_opt
    }
 
 
    ################################################################
-   # Call tsbartFit.cpp or tsbartProbit.cpp
+   # Call tsbartFit.cpp or tsbartProbit.cpp if monotone=NULL,
+   # or tsbartFitMono.cpp or tsbartProbitMono.cpp if monotone= "incr" or "decr"
    ################################################################
    out = NULL
 
@@ -226,10 +278,13 @@ tsbart <- function(y, tgt, x, tpred=NULL, xpred=NULL,
                       con_sd = ifelse(abs(2*ysd - sd_control)<1e-6, 2, sd_control/ysd),
                       use_fscale=use_fscale,
                       save_trees=FALSE,
-                      silent_mode=!verbose)
+                      silent_mode=!verbose,
+                      monotone=ifelse(monotone=="no", FALSE, TRUE),
+                      incr=ifelse(monotone=="incr", TRUE, FALSE),
+                      round_ind=rounding_ind, round_c2=rounding_halfWidth)
 
-   # Probit response.
-   } else if(probit==TRUE){
+   # Probit response, not monotone.
+   } else{
       out = tsbartProbit(y=y[perm], yobs=yobs[perm], tgt=tgt[perm], tpred=tpred[perm_oos],
                          x=t(xx[perm,]), xpred=t(xxpred[perm_oos,]), xinfo_list=cutpoints,
                          nburn=nburn, nsim=nsim, offset=offset, ntree=ntree, ecross=ecross,
@@ -288,6 +343,12 @@ tsbart <- function(y, tgt, x, tpred=NULL, xpred=NULL,
                  'ecross' = ecross)
    }
 
+   # Include rounding info if provided.
+   if(!is.null(binsize)){
+      output$y_potentially_rounded_indicator = rounding_ind[order(perm)]
+      output$y_imputed = as.numeric(out$y[order(perm)]) * ysd + ybar
+   }
+
    # Include metropolis info if indicated.
    if(mh){
       output$metrop = metrop
@@ -298,6 +359,7 @@ tsbart <- function(y, tgt, x, tpred=NULL, xpred=NULL,
       output$inputs = inputs
    }
 
+   output$round_idx = out$round_idx
    # Return output.
    return(output)
    }

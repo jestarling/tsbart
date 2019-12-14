@@ -107,5 +107,10 @@ double rtnormlo1(double mean, double lo);
 double rtnormhi1(double mean, double lo);
 double rtnormlo(double mean, double sd, double lo);
 arma::vec rmvnorm_post(arma::vec &m, arma::mat &Phi);
+
+// Commented out the below algorithm due to speed.  See the rtn.cpp/rtn.hpp files for
+// faster implementation.
+// double norm_trunc(double mean, double sd, double a, double b);
 #endif // RNG_H
+
 

@@ -173,9 +173,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rtnorm
+double rtnorm(double lower, double upper, double mu, double sigma);
+RcppExport SEXP _tsbart_rtnorm(SEXP lowerSEXP, SEXP upperSEXP, SEXP muSEXP, SEXP sigmaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type lower(lowerSEXP);
+    Rcpp::traits::input_parameter< double >::type upper(upperSEXP);
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(rtnorm(lower, upper, mu, sigma));
+    return rcpp_result_gen;
+END_RCPP
+}
 // tsbartFit
-List tsbartFit(arma::vec y, arma::vec tgt, arma::vec tpred, arma::vec x, arma::vec xpred, List xinfo_list, int nburn, int nsim, int ntree, double lambda, double sigq, double sighat, double nu, double ecross, double base_tree, double power_tree, double con_sd, bool use_fscale, CharacterVector treef_name_, bool save_trees, bool silent_mode);
-RcppExport SEXP _tsbart_tsbartFit(SEXP ySEXP, SEXP tgtSEXP, SEXP tpredSEXP, SEXP xSEXP, SEXP xpredSEXP, SEXP xinfo_listSEXP, SEXP nburnSEXP, SEXP nsimSEXP, SEXP ntreeSEXP, SEXP lambdaSEXP, SEXP sigqSEXP, SEXP sighatSEXP, SEXP nuSEXP, SEXP ecrossSEXP, SEXP base_treeSEXP, SEXP power_treeSEXP, SEXP con_sdSEXP, SEXP use_fscaleSEXP, SEXP treef_name_SEXP, SEXP save_treesSEXP, SEXP silent_modeSEXP) {
+List tsbartFit(arma::vec y, arma::vec tgt, arma::vec tpred, arma::vec x, arma::vec xpred, List xinfo_list, int nburn, int nsim, int ntree, double lambda, double sigq, double sighat, double nu, double ecross, double base_tree, double power_tree, double con_sd, bool use_fscale, CharacterVector treef_name_, bool save_trees, bool silent_mode, bool monotone, bool incr, arma::vec round_ind, double round_c2);
+RcppExport SEXP _tsbart_tsbartFit(SEXP ySEXP, SEXP tgtSEXP, SEXP tpredSEXP, SEXP xSEXP, SEXP xpredSEXP, SEXP xinfo_listSEXP, SEXP nburnSEXP, SEXP nsimSEXP, SEXP ntreeSEXP, SEXP lambdaSEXP, SEXP sigqSEXP, SEXP sighatSEXP, SEXP nuSEXP, SEXP ecrossSEXP, SEXP base_treeSEXP, SEXP power_treeSEXP, SEXP con_sdSEXP, SEXP use_fscaleSEXP, SEXP treef_name_SEXP, SEXP save_treesSEXP, SEXP silent_modeSEXP, SEXP monotoneSEXP, SEXP incrSEXP, SEXP round_indSEXP, SEXP round_c2SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -200,7 +214,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< CharacterVector >::type treef_name_(treef_name_SEXP);
     Rcpp::traits::input_parameter< bool >::type save_trees(save_treesSEXP);
     Rcpp::traits::input_parameter< bool >::type silent_mode(silent_modeSEXP);
-    rcpp_result_gen = Rcpp::wrap(tsbartFit(y, tgt, tpred, x, xpred, xinfo_list, nburn, nsim, ntree, lambda, sigq, sighat, nu, ecross, base_tree, power_tree, con_sd, use_fscale, treef_name_, save_trees, silent_mode));
+    Rcpp::traits::input_parameter< bool >::type monotone(monotoneSEXP);
+    Rcpp::traits::input_parameter< bool >::type incr(incrSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type round_ind(round_indSEXP);
+    Rcpp::traits::input_parameter< double >::type round_c2(round_c2SEXP);
+    rcpp_result_gen = Rcpp::wrap(tsbartFit(y, tgt, tpred, x, xpred, xinfo_list, nburn, nsim, ntree, lambda, sigq, sighat, nu, ecross, base_tree, power_tree, con_sd, use_fscale, treef_name_, save_trees, silent_mode, monotone, incr, round_ind, round_c2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -249,7 +267,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_tsbart_dmixnorm_post", (DL_FUNC) &_tsbart_dmixnorm_post, 4},
     {"_tsbart_pmixnorm_post", (DL_FUNC) &_tsbart_pmixnorm_post, 4},
     {"_tsbart_rpgmix", (DL_FUNC) &_tsbart_rpgmix, 3},
-    {"_tsbart_tsbartFit", (DL_FUNC) &_tsbart_tsbartFit, 21},
+    {"_tsbart_rtnorm", (DL_FUNC) &_tsbart_rtnorm, 4},
+    {"_tsbart_tsbartFit", (DL_FUNC) &_tsbart_tsbartFit, 25},
     {"_tsbart_tsbartProbit", (DL_FUNC) &_tsbart_tsbartProbit, 19},
     {"_rcpp_module_boot_treesample_module", (DL_FUNC) &_rcpp_module_boot_treesample_module, 0},
     {NULL, NULL, 0}

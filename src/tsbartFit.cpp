@@ -12,6 +12,8 @@
 #include "info.h"
 #include "funs.h"
 #include "bd.h"
+#include "rtn.hpp"
+#include "pava.h"
 
 using namespace Rcpp;
 using namespace arma;
@@ -31,7 +33,10 @@ List tsbartFit(arma::vec y,
                bool use_fscale = false,
                CharacterVector treef_name_="tsbtrees.txt",
                bool save_trees = false,
-               bool silent_mode = false)
+               bool silent_mode = false,
+               bool monotone = false,
+               bool incr = true,
+               arma::vec round_ind = 0, double round_c2 = 0)
 {
 
    // Begin output stream.
@@ -110,6 +115,7 @@ List tsbartFit(arma::vec y,
 
    // Subtract off means (in-place subtraction).
    y = y - alpha_ti;
+
 
    //--------------------------------------------------------------------------------------
    // Sufficient statistics for y - scalar and vector versions.
@@ -318,6 +324,17 @@ List tsbartFit(arma::vec y,
    treef << p << endl;  //dimension of x's
    treef << (int)(nsim/thin) << endl;
 
+   //------------------------------------------------------
+   // For rounding:
+   // Save vector of indices for observations which are potentially rounded.
+   // (For faster looping inside MCMC.)
+   uvec round_idx;
+   round_idx.resize(0);
+
+   if(round_ind.size()>1){
+      round_idx = find(round_ind==1);
+   }
+
    //*****************************************************************************
    //* MCMC
    //*****************************************************************************
@@ -380,13 +397,13 @@ List tsbartFit(arma::vec y,
 
          seta_sfy = 0.0; seta_sf2 = 0.0;
          for(size_t k=0;k<n;k++) {
-            seta_sfy += allfit[k] * y[k];
-            seta_sf2 += allfit[k] * allfit[k];
+            seta_sfy += (allfit[k]/pi.eta) * y[k];
+            seta_sf2 += (allfit[k]/pi.eta) * (allfit[k]/pi.eta);
          }
 
          // Calculate variance and mean for eta full conditional.
-         // With eta ~ N(con_sd, gamma2) to make con_sd the C+ prior's median.
-         seta_var = 1 / (1 / (pi.gamma * pi.gamma) + seta_sf2 / (pi.eta*pi.eta*sighat*sighat));
+         seta_var = 1 / (1 / (pi.gamma*pi.gamma) + seta_sf2 / (sighat*sighat));
+         //seta_mean = seta_var * (seta_sfy/(sighat*sighat));
          seta_mean = seta_var * (con_sd/(pi.gamma*pi.gamma) + seta_sfy/(pi.eta*sighat*sighat));
 
          // Draw normal full conditional for eta.
@@ -407,13 +424,38 @@ List tsbartFit(arma::vec y,
 
       //-------------------------------------------------
       // draw gamma.  with eta ~ N(con_sd, gamma^2)
-      pi.gamma = sqrt((1 + ((pi.eta-con_sd) * (pi.eta-con_sd))) / gen.chi_square(2));
+      double gamma_degf = 1;  // For C+(con_sd) prior.
+      double gamma_a = (gamma_degf + 1) / 2;
+      double gamma_b = (gamma_degf*con_sd*con_sd + pi.eta*pi.eta) / 2;
 
-      // double gamma_degf = 1; // For C+(con_sd).
-      // double gamma_a = (gamma_degf + 1)/2;
-      // double gamma_b = (gamma_degf*con_sd*con_sd + pi.eta*pi.eta)/2;
-      //
-      // pi.gamma = gen.gamma(gamma_a, gamma_b);
+      pi.gamma = gen.gamma(gamma_a, gamma_b);
+
+      //pi.gamma = sqrt((1 + ((pi.eta-con_sd) * (pi.eta-con_sd))) / gen.chi_square(2));
+
+      //-------------------------------------------------
+      // If some y's are rounded, draw updates for rounded y's.
+      if(round_idx.size()>0){
+
+        // Rcout << "drawing y's" << endl;
+
+         for(int rnd = 0; rnd < round_idx.size(); rnd++){
+
+            // Set up bounds for truncated normal.
+            uword temp = round_idx[rnd];
+            double temp_mean = allfit[temp];
+            double temp_lb = temp_mean - round_c2;
+            double temp_ub = temp_mean + round_c2;
+
+            //cout << "Draw y truncated norm info for " << rnd << " of " << round_idx.size() << endl;
+            //cout << "Mean: " << temp_mean << ", sd: " << pi.sigma << endl;
+            //cout << "Lb: " << temp_lb << ", Ub: " << temp_ub << endl;
+
+            // Draw the potentially-rounded y from a truncated normal.
+            //cout << "y before: " << y[temp] << endl;
+            y[temp] = rtnorm(temp_lb, temp_ub, temp_mean, pi.sigma);
+            //scout << "y after: " << y[temp] << endl;
+         }
+      }
 
       //-------------------------------------------------
       // Save MCMC output.
@@ -438,8 +480,13 @@ List tsbartFit(arma::vec y,
          // Loop through trt=1 obs first.
          for(size_t k=0;k<n;k++) {
 
-            // sfit saves a matrix of MCMC iterations (rows) for each obs (cols).
-            sfit(i-nburn, k) = allfit[k];
+            if(monotone==false){
+               // sfit saves a matrix of MCMC iterations (rows) for each obs (cols).
+               sfit(i-nburn, k) = allfit[k] + alpha_ti[k]; // Allfit already carries mu scale. Just add back in overall means.
+            } else{
+               sfit(i-nburn, k) = fit_i_pava(k, t, xi, di, alpha_t, pi.eta, incr);
+            }
+
          }
 
          //------------------------------
@@ -451,7 +498,11 @@ List tsbartFit(arma::vec y,
             // Loop through trt=1 obs first.
             for(size_t k=0;k<dip.n;k++) {
 
-               spred(i-nburn, k) = fit_i(k, t, xi, dip) * pi.eta;
+               if(monotone==false){
+                  spred(i-nburn, k) = fit_i(k, t, xi, dip, alpha_t, pi.eta);
+               } else{
+                  spred(i-nburn, k) = fit_i_pava(k, t, xi, dip, alpha_t, pi.eta, incr);
+               }
 
             }
 
@@ -470,42 +521,12 @@ List tsbartFit(arma::vec y,
    if(silent_mode==false){ Rcout << "time for loop: " << time2 - time1 << endl; }
 
    //*****************************************************************************
-   // Reverse scaling, centering, and reversing subtraction of alpha_t.
-   //*****************************************************************************
-
-   //-------------------------------------------------
    // Rescale y vector.
-   //-------------------------------------------------
-   y = (y + alpha_ti);
+   //*****************************************************************************
+   y = y + alpha_ti;
 
-   //-------------------------------------------------
-   // In-sample fits matrix (sfit).
-   //-------------------------------------------------
-   for(int b=0; b<nsim; b++){
-      for(size_t i=0; i<n; i++){
-         sfit(b,i) = sfit(b,i) + alpha_ti(i);
-      }
-   }
 
-   //-------------------------------------------------
-   // Out-of-sample fits matrix (spred).
-   //-------------------------------------------------
 
-   // First, need a vector for the alpha_ti values at each tpred.
-   // For out of sample observations, pull in appropriate ybar_t
-   // from each time point.  (Uses ybar_t from in-sample data for each time point).
-   vec alpha_ti_pred(np);
-   for(size_t i = 0; i < np; i++){
-      idx = find(tref == tpred(i));
-      alpha_ti_pred(i) = as_scalar(alpha_t(idx));
-   }
-
-   // Then adjust out-of-sample fits matrix.
-   for(int b=0; b<nsim; b++){
-      for(size_t i=0; i<np; i++){
-         spred(b,i) = spred(b,i) + alpha_ti_pred(i);
-      }
-   }
 
    // //*****************************************************************************
    // //* Posterior predictive draws for each MCMC draw: N(f-hat, sighat)
@@ -556,6 +577,8 @@ List tsbartFit(arma::vec y,
                        _["sigma"]          = ssigma,   // Vector of sigma MCMC draws.
                        _["eta"]            = seta,     // Vector of eta MCMC draws.
                        _["gamma"]          = sgamma,   // Vector of gamma MCMC draws.
-                       _["alpha"]          = alpha     // matrix of MH alpha's for trees
+                       _["alpha"]          = alpha,    // matrix of MH alpha's for trees
+                       _["y"]              = y,         // Vector of y values (may be updated with rounding draws),
+                       _["round_idx"]      = round_idx
    ));
 }

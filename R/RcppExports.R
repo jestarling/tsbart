@@ -49,8 +49,19 @@ rpgmix <- function(n, a, m) {
     .Call('_tsbart_rpgmix', PACKAGE = 'tsbart', n, a, m)
 }
 
-tsbartFit <- function(y, tgt, tpred, x, xpred, xinfo_list, nburn, nsim, ntree = 200L, lambda = -999, sigq = .9, sighat = -999, nu = 3, ecross = 1, base_tree = .95, power_tree = 2.0, con_sd = 1, use_fscale = FALSE, treef_name_ = "tsbtrees.txt", save_trees = FALSE, silent_mode = FALSE) {
-    .Call('_tsbart_tsbartFit', PACKAGE = 'tsbart', y, tgt, tpred, x, xpred, xinfo_list, nburn, nsim, ntree, lambda, sigq, sighat, nu, ecross, base_tree, power_tree, con_sd, use_fscale, treef_name_, save_trees, silent_mode)
+#' Pseudorandom numbers from a Gaussian distribution that is truncated to an interval.
+#'
+#' @param lower lower bound of truncation interval
+#' @param upper upper bound of truncation interval
+#' @param mu mean of the normal random variable (before truncation)
+#' @param sigma standard deviation of the normal random variable (before truncation)
+#' @export
+rtnorm <- function(lower, upper, mu, sigma) {
+    .Call('_tsbart_rtnorm', PACKAGE = 'tsbart', lower, upper, mu, sigma)
+}
+
+tsbartFit <- function(y, tgt, tpred, x, xpred, xinfo_list, nburn, nsim, ntree = 200L, lambda = -999, sigq = .9, sighat = -999, nu = 3, ecross = 1, base_tree = .95, power_tree = 2.0, con_sd = 1, use_fscale = FALSE, treef_name_ = "tsbtrees.txt", save_trees = FALSE, silent_mode = FALSE, monotone = FALSE, incr = TRUE, round_ind = 0L, round_c2 = 0) {
+    .Call('_tsbart_tsbartFit', PACKAGE = 'tsbart', y, tgt, tpred, x, xpred, xinfo_list, nburn, nsim, ntree, lambda, sigq, sighat, nu, ecross, base_tree, power_tree, con_sd, use_fscale, treef_name_, save_trees, silent_mode, monotone, incr, round_ind, round_c2)
 }
 
 tsbartProbit <- function(y, yobs, tgt, tpred, x, xpred, xinfo_list, nburn, nsim, offset = 0, ntree = 200L, ecross = 1, base_tree = .95, power_tree = 2.0, con_sd = 1, use_fscale = FALSE, treef_name_ = "tsbtrees.txt", save_trees = FALSE, silent_mode = FALSE) {

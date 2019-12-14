@@ -97,8 +97,8 @@ Parameter setting consists of the following steps, all performed by the *ecrossT
 # Evaluate optimal number of crossings.
 ecross_candidates = seq(.5,3,by=.5)
 ecrossTune = tuneEcross(ecross_candidates,
-                        y=train$y, tgt=train$ti, x=xx,
-                        nburn=100, nsim=250, ntree=200,
+                        y=train$y, tgt=train$ti,  x=xx, 
+                        nburn=100, nsim=100, ntree=200,
                         lambda=lambda, sigq=sigq, sighat=sighat, nu=nu,
                         base_tree=.95, power_tree=2,
                         probit=FALSE, yobs=NULL)

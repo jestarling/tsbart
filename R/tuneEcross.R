@@ -2,7 +2,7 @@ tuneEcross = function(ecross_candidates = seq(.25,5,by=.25),
                       y, tgt, x, nburn=1000, nsim=1000, ntree=200,
                       lambda=NULL, sigq=.9, sighat=NULL, nu=3,
                       base_tree=.95, power_tree=2,
-                      probit=FALSE, yobs=NULL){
+                      probit=FALSE, yobs=NULL, monotone="no", binsize=NULL){
 
    #---------------------------------------------------
    # FUNCTION: Optimizes expected number of crossings across specified grid.
@@ -22,7 +22,7 @@ tuneEcross = function(ecross_candidates = seq(.25,5,by=.25),
       fit = tsbart(y=y, tgt=tgt, x=x, nburn=nburn, nsim=nsim, ntree=ntree,
                    lambda=lambda, sigq=sigq, sighat=sighat, nu=nu,
                    ecross=ecross_candidates[i], base_tree=base_tree, power_tree=power_tree, use_fscale=T, #sd_control=1,
-                   probit=probit, yobs=yobs, verbose=F)
+                   probit=probit, yobs=yobs, verbose=F, monotone=monotone, binsize = binsize)
 
 
       # Calculate in-sample WAIC.

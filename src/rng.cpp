@@ -1,5 +1,6 @@
 #include <cmath>
 #include "rng.h"
+#include <iostream>
 
   //standard normal, truncated to be >lo
   double rtnormlo0(double lo) {
@@ -45,3 +46,21 @@ arma::vec rmvnorm_post(arma::vec &m, arma::mat &Phi) {
    arma::vec res = mu + arma::solve(arma::trimatu(arma::chol(Phi)), z);
    return(res);
 }
+
+// Commented out the below algorithm due to speed.  See the rtn.cpp/rtn.hpp files for
+// faster implementation.
+
+// // Truncated normal in interval of (a,b) for rounding sampling.
+// // norm_rs(a, b)
+// // generates a sample from a N(0,1) RV restricted to be in the interval
+// // (a,b) via rejection sampling.
+// // ======================================================================
+// double norm_trunc(double mean, double sd, double a, double b)
+// {
+//    double  x;
+//    x = R::rnorm(mean, sd);
+//    while( (x < a) || (x > b) ){
+//       x = R::rnorm(mean, sd);
+//    };
+//    return x;
+// }
