@@ -13,6 +13,7 @@ knitr::opts_chunk$set(fig.width=6, fig.height=4)
 library(tidyverse)
 library(tsbart)
 library(gridExtra)
+library(data.table)
 ```
 
 This vignette provides a walk-through of fitting the Targeted Smooth BART model to a simulated data set using the tsbart package.

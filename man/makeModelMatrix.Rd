@@ -2,7 +2,7 @@
 % Please edit documentation in R/KStest.R
 \name{makeModelMatrix}
 \alias{makeModelMatrix}
-\title{makeModelMatrix: Create over-parameterized model matrix for Functional BART fitting.}
+\title{makeModelMatrix: Create over-parameterized model matrix for tsBART fitting.}
 \usage{
 makeModelMatrix(df)
 }
@@ -13,7 +13,7 @@ makeModelMatrix(df)
 \item{X}{An overparameterized model matrix, where factor covariates are split into columns of indicators, with one column for each level, including the baseline level.}
 }
 \description{
-This function creates a model matrix for use with Functional BART fits (\code{\link{funbartFit}}, etc.)
+This function creates a model matrix for use with tsbart().
 }
 \examples{
 \dontrun{
@@ -24,6 +24,6 @@ x <- makeModelMatrix(mydf)
 \author{
 Jennifer E. Starling
 }
-\keyword{funbart}
+\keyword{tsbart}
 
 

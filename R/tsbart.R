@@ -252,11 +252,11 @@ tsbart <- function(y, tgt, x, tpred=NULL, xpred=NULL,
    ################################################################
    if(ecross=="tune"){
       tuned = tuneEcross(ecross_candidates = seq(.25,5,by=.25),
-                         y[perm], tgt[perm], tpred[perm_oos], x[perm,], xpred[perm_oos,],
+                         y=y[perm], tgt=tgt[perm], x=x[perm,],
                          nburn=500, nsim=500, ntree=200,
-                         lambda, sigq, sighat, nu,
-                         base_tree, power_tree,
-                         probit, yobs[perm], monotone=monotone)
+                         lambda=lambda, sigq=sigq, sighat=sighat, nu=nu,
+                         base_tree=base_tree, power_tree=power_tree,
+                         probit=probit, yobs=yobs[perm], monotone=monotone)
       ecross = tuned$ecross_opt
    }
 

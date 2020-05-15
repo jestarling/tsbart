@@ -1,8 +1,8 @@
 Package: tsbart
 Type: Package
 Title: BART with Targeted Smoothing
-Version: 1.0.0
-Date: 2018-12-02
+Version: 1.0.1
+Date: 2020-05-15
 Author: Jennifer Starling
 Authors@R: person(given = "Jennifer", family = "Starling", email="jstarling@utexas.edu", role = c("aut", "cre"))
 Maintainer: Questions and comments to <jstarling@utexas.edu>

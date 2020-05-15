@@ -2,13 +2,12 @@
 \alias{tsbart}
 \title{tsbart: Fits tsbart model for continuous or binary responses.}
 \usage{
-tsbart(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200,
-                   lambda=NULL, sigq=.9, sighat=NULL, nu=3,
-                   ecross=1, base_tree=.95, power_tree=2,
-                   sd_control=sd(y), use_fscale=TRUE,
-                   probit=FALSE, yobs=NULL, verbose=T,
-                   mh=F, save_inputs=T, monotone="no",
-                   binsize=NULL)
+tsbart(y, tgt, x, tpred = NULL, xpred = NULL, nburn = 100,
+                 nsim = 1000, ntree = 200, lambda = NULL, sigq = 0.9,
+                 sighat = NULL, nu = 3, ecross = 1, base_tree = 0.95,
+                 power_tree = 2, sd_control = 2 * sd(y), use_fscale = TRUE,
+                 probit = FALSE, yobs = NULL, verbose = T, mh = F,
+                 save_inputs = T, monotone = "no", binsize = NULL)
 }
 \arguments{
 \item{y}{Length n vector with continuous response values.  In probit case, should contain initializations for latent variables.}
@@ -45,19 +44,19 @@ tsbart(y, tgt, tpred, x, xpred, nburn, nsim, ntree=200,
 
 \item{use_fscale}{Use a half-Cauchy prior on the scale of f(x,t).}
 
-\item{probit}{0 indicates continuous response; 1 indicates probit response.  Default is 0.  If 1, then yobs must be populated.}
+\item{probit}{F indicates continuous response; T indicates probit response.  Default is F.  If T, then yobs must be populated.}
 
-\item{yobs}{Length n vector of binary responses; only populated for probit=1 case.}
+\item{yobs}{Length n vector of binary responses; only populated for probit=T case.}
 
 \item{verbose}{Boolean for writing progress report to console.}
 
-\item{mh}{Boolean for including Metropolis acceptance detail in output.  Defaults to FALSE.  If true, output includes the metrop dataframe.}
+\item{mh}{Boolean for including Metropolis acceptance detail in output.  Defaults to FALSE.  If TRUE, output includes the metrop dataframe.}
 
-\item{save_inputs}{Boolean for saving user inputs.  If true, output includes the inputs dataframe.}
+\item{save_inputs}{Boolean for saving user inputs.  If TRUE, output includes the inputs dataframe.}
 
 \item{monotone}{For Projective Smooth BART. Specifies type of monotonicity constraint on f(x,t) estimates.  If "no", no monotonicity constraint.  If "incr" or "decr", f(x,t) is monotone increasing or decreasing.  Default is "no".}
 
-\item{binsize}{Specifies a value $c$ where (y_i mod c == 0) indicates that y_i may have been rounded to this bin size.}
+\item{binsize}{Specifies a value $c$ where (y_i mod c == 0) indicates that y_i may have been rounded to this bin size.  Defaults to NULL.}
 
 }
 \value{

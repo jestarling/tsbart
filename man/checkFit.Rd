@@ -2,7 +2,7 @@
 \alias{checkFit}
 \title{checkFit: Generates log-likelihood and WAIC for tsbart fits.  Called by tuneEcross function.}
 \usage{
-checkFit(y, mcmcdraws, probit=FALSE, doWaic=TRUE, sig, yobs=NULL)
+checkFit(y, mcmcdraws, probit, doWaic, sig=NULL, yobs=NULL)
 }
 \arguments{
 \item{y}{A vector with continuous response values. Required, defaults to NULL.}
@@ -10,9 +10,9 @@ checkFit(y, mcmcdraws, probit=FALSE, doWaic=TRUE, sig, yobs=NULL)
 \item{mcmcdraws}{A matrix containing the MCMC draws for the tsbart fit. Rows are MCMC iterations, columns are observations.  Number of columns must match length of y.  Required, defaults to NULL.}
 
 
-\item{probit}{Boolean indicator for whether model is probit. Optional, defaults to FALSE.}
+\item{probit}{Boolean indicator for whether model is probit.}
 
-\item{doWaic}{Boolean indicator for whether to calculate WAIC in addition to log-likelihood. Optional, defaults to TRUE.}
+\item{doWaic}{Boolean indicator for whether to calculate WAIC in addition to log-likelihood.}
 
 \item{sig}{A vector with sigma MCMC draws.  Required if probit=FALSE, defaults to NULL.  Must be NULL if probit=TRUE.}
 
