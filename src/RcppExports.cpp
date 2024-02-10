@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // do_rgig1
 double do_rgig1(double lambda, double chi, double psi);
 RcppExport SEXP _tsbart_do_rgig1(SEXP lambdaSEXP, SEXP chiSEXP, SEXP psiSEXP) {

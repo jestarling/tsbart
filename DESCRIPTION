@@ -1,19 +1,21 @@
 Package: tsbart
 Type: Package
 Title: BART with Targeted Smoothing
-Version: 1.0.1
-Date: 2020-05-15
+Version: 1.0.2
+Date: 2024-02-10
 Author: Jennifer Starling
 Authors@R: person(given = "Jennifer", family = "Starling", email="jstarling@utexas.edu", role = c("aut", "cre"))
 Maintainer: Questions and comments to <jstarling@utexas.edu>
 BugReports: https://github.com/jestarling/tsbart/issues
 Description: Implements BART with Targeted Smoothing (tsBART).
-License: GNU GPL v3.0
-Depends: Rcpp (>= 0.10.4), RcppArmadillo
+License: GPL (>= 3)
+Depends: Rcpp (>= 0.10.4), RcppArmadillo, R (>= 2.10)
 LinkingTo: Rcpp, RcppArmadillo
 NeedsCompilation: yes
 Suggests: knitr, rmarkdown
 VignetteBuilder: knitr
 LazyData: true
-RoxygenNote: 6.1.1
+RoxygenNote: 7.2.3
 Encoding: UTF-8
+Imports: 
+    data.table

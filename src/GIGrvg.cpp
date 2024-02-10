@@ -45,7 +45,7 @@ SEXP dgig(SEXP sexp_x, SEXP sexp_lambda, SEXP sexp_chi, SEXP sexp_psi, SEXP sexp
 /* Return:                                                                   */
 /*   density at x                                                            */
 /*---------------------------------------------------------------------------*/
-{ 
+{
   /* Arguments */
   double *x;                 /* array of points */
   int nx;                    /* length of x */
@@ -89,10 +89,10 @@ SEXP dgig(SEXP sexp_x, SEXP sexp_lambda, SEXP sexp_chi, SEXP sexp_psi, SEXP sexp
       res_err = R_NaN;
       warning("NaNs produced");
     }
-  } 
+  }
   else {
     /* check GIG parameters */
-    if ( (chi <  0. || psi < 0)      || 
+    if ( (chi <  0. || psi < 0)      ||
 	 (chi == 0. && lambda <= 0.) ||
 	 (psi == 0. && lambda >= 0.) ) {
       err = TRUE;
@@ -152,12 +152,12 @@ SEXP dgig(SEXP sexp_x, SEXP sexp_lambda, SEXP sexp_chi, SEXP sexp_psi, SEXP sexp
   /* return result to R */
   UNPROTECT(1);
   return sexp_res;
-  
+
 } /* end of dgig() */
 
 /*---------------------------------------------------------------------------*/
 
-#define ZTOL (DOUBLE_EPS*10.0)
+#define ZTOL (DBL_EPSILON*10.0)
 
 SEXP rgig(SEXP sexp_n, SEXP sexp_lambda, SEXP sexp_chi, SEXP sexp_psi)
 /*---------------------------------------------------------------------------*/
@@ -229,7 +229,7 @@ SEXP do_rgig(int n, double lambda, double chi, double psi)
 
   /* check GIG parameters: */
   if ( !(R_FINITE(lambda) && R_FINITE(chi) && R_FINITE(psi)) ||
-       (chi <  0. || psi < 0)      || 
+       (chi <  0. || psi < 0)      ||
        (chi == 0. && lambda <= 0.) ||
        (psi == 0. && lambda >= 0.) ) {
     error("invalid parameters for GIG distribution: lambda=%g, chi=%g, psi=%g",
@@ -240,24 +240,24 @@ SEXP do_rgig(int n, double lambda, double chi, double psi)
   PROTECT(sexp_res = NEW_NUMERIC(n));
   res = REAL(sexp_res);
 
-  if (chi < ZTOL) { 
+  if (chi < ZTOL) {
     /* special cases which are basically Gamma and Inverse Gamma distribution */
     if (lambda > 0.0) {
-      for (i=0; i<n; i++) res[i] = rgamma(lambda, 2.0/psi); 
+      for (i=0; i<n; i++) res[i] = rgamma(lambda, 2.0/psi);
     }
     else {
-      for (i=0; i<n; i++) res[i] = 1.0/rgamma(-lambda, 2.0/psi); 
-    }    
+      for (i=0; i<n; i++) res[i] = 1.0/rgamma(-lambda, 2.0/psi);
+    }
   }
 
   else if (psi < ZTOL) {
     /* special cases which are basically Gamma and Inverse Gamma distribution */
     if (lambda > 0.0) {
-      for (i=0; i<n; i++) res[i] = 1.0/rgamma(lambda, 2.0/chi); 
+      for (i=0; i<n; i++) res[i] = 1.0/rgamma(lambda, 2.0/chi);
     }
     else {
-      for (i=0; i<n; i++) res[i] = rgamma(-lambda, 2.0/chi); 
-    }    
+      for (i=0; i<n; i++) res[i] = rgamma(-lambda, 2.0/chi);
+    }
 
   }
 
@@ -286,10 +286,10 @@ SEXP do_rgig(int n, double lambda, double chi, double psi)
         _rgig_newapproach1(res, n, lambda, lambda_old, omega, alpha);
         break;
       }
-      
+
       /* else */
       error("parameters must satisfy lambda>=0 and omega>0.");
-      
+
     } while (0);
   }
 
@@ -311,7 +311,7 @@ double do_rgig1(double lambda, double chi, double psi)
 
   /* check GIG parameters: */
   if ( !(R_FINITE(lambda) && R_FINITE(chi) && R_FINITE(psi)) ||
-       (chi <  0. || psi < 0)      || 
+       (chi <  0. || psi < 0)      ||
        (chi == 0. && lambda <= 0.) ||
        (psi == 0. && lambda >= 0.) ) {
     error("invalid parameters for GIG distribution: lambda=%g, chi=%g, psi=%g",
@@ -322,24 +322,24 @@ double do_rgig1(double lambda, double chi, double psi)
   PROTECT(sexp_res = NEW_NUMERIC(n));
   res = REAL(sexp_res);
 
-  if (chi < ZTOL) { 
+  if (chi < ZTOL) {
     /* special cases which are basically Gamma and Inverse Gamma distribution */
     if (lambda > 0.0) {
-      for (i=0; i<n; i++) res[i] = rgamma(lambda, 2.0/psi); 
+      for (i=0; i<n; i++) res[i] = rgamma(lambda, 2.0/psi);
     }
     else {
-      for (i=0; i<n; i++) res[i] = 1.0/rgamma(-lambda, 2.0/psi); 
-    }    
+      for (i=0; i<n; i++) res[i] = 1.0/rgamma(-lambda, 2.0/psi);
+    }
   }
 
   else if (psi < ZTOL) {
     /* special cases which are basically Gamma and Inverse Gamma distribution */
     if (lambda > 0.0) {
-      for (i=0; i<n; i++) res[i] = 1.0/rgamma(lambda, 2.0/chi); 
+      for (i=0; i<n; i++) res[i] = 1.0/rgamma(lambda, 2.0/chi);
     }
     else {
-      for (i=0; i<n; i++) res[i] = rgamma(-lambda, 2.0/chi); 
-    }    
+      for (i=0; i<n; i++) res[i] = rgamma(-lambda, 2.0/chi);
+    }
 
   }
 
@@ -368,10 +368,10 @@ double do_rgig1(double lambda, double chi, double psi)
         _rgig_newapproach1(res, n, lambda, lambda_old, omega, alpha);
         break;
       }
-      
+
       /* else */
       error("parameters must satisfy lambda>=0 and omega>0.");
-      
+
     } while (0);
   }
 
@@ -428,7 +428,7 @@ void _rgig_ROU_noshift (double *res, int n, double lambda, double lambda_old, do
   /* shortcuts */
   t = 0.5 * (lambda-1.);
   s = 0.25 * omega;
-  
+
   /* mode = location of maximum of sqrt(f(x)) */
   xm = _gig_mode(lambda, omega);
 
@@ -526,11 +526,11 @@ void _rgig_newapproach1 (double *res, int n, double lambda, double lambda_old, d
     k2 = pow(x0, lambda-1.);
     A[2] = k2 * 2. * exp(-omega*x0/2.)/omega;
   }
-  
+
   else {
     /* domain [x_0, 2/omega] */
     k1 = exp(-omega);
-    A[1] = (lambda == 0.) 
+    A[1] = (lambda == 0.)
       ? k1 * log(2./(omega*omega))
       : k1 / lambda * ( pow(2./omega, lambda) - pow(x0, lambda) );
 
@@ -550,16 +550,16 @@ void _rgig_newapproach1 (double *res, int n, double lambda, double lambda_old, d
 
       /* get uniform random number */
       V = Atot * unif_rand();
-      
+
       do {
-	
+
 	/* domain [0, x_0] */
 	if (V <= A[0]) {
 	  X = x0 * V / A[0];
 	  hx = k0;
 	  break;
 	}
-	
+
 	/* domain [x_0, 2/omega] */
 	V -= A[0];
 	if (V <= A[1]) {
@@ -573,16 +573,16 @@ void _rgig_newapproach1 (double *res, int n, double lambda, double lambda_old, d
 	  }
 	  break;
 	}
-	
+
 	/* domain [max(x0,2/omega), Infinity] */
 	V -= A[1];
 	a = (x0 > 2./omega) ? x0 : 2./omega;
 	X = -2./omega * log(exp(-omega/2. * a) - omega/(2.*k2) * V);
 	hx = k2 * exp(-omega/2. * X);
 	break;
-	
+
       } while(0);
-      
+
       /* accept or reject */
       U = unif_rand() * hx;
 
@@ -592,7 +592,7 @@ void _rgig_newapproach1 (double *res, int n, double lambda, double lambda_old, d
 	break;
       }
     } while(1);
-    
+
   }
 
   /* -- End ---------------------------------------------------------------- */
@@ -738,7 +738,7 @@ _unur_bessel_k_nuasympt (double x, double nu, int islog, int expon_scaled)
   double sz, t, t2, eta;      /* auxiliary variables */
   double d, u1t,u2t,u3t,u4t;  /* (auxiliary) results for Debye polynomials */
   double res;                 /* value of log(K_nu(x)) [= result] */
-  
+
   /* rescale: we comute K_nu(z * nu) */
   z = x / nu;
 
@@ -754,10 +754,10 @@ _unur_bessel_k_nuasympt (double x, double nu, int islog, int expon_scaled)
   u1t = (t * (3. - 5.*t2))/24.;
   u2t = t2 * (81. + t2*(-462. + t2 * 385.))/1152.;
   u3t = t*t2 * (30375. + t2 * (-369603. + t2 * (765765. - t2 * 425425.)))/414720.;
-  u4t = t2*t2 * (4465125. 
+  u4t = t2*t2 * (4465125.
 		 + t2 * (-94121676.
-			 + t2 * (349922430. 
-				 + t2 * (-446185740. 
+			 + t2 * (349922430.
+				 + t2 * (-446185740.
 					 + t2 * 185910725.)))) / 39813120.;
   d = (-u1t + (u2t + (-u3t + u4t/nu)/nu)/nu)/nu;
 

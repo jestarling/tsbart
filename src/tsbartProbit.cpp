@@ -208,7 +208,7 @@ List tsbartProbit(arma::vec y,      // True latent variable values of the respon
 
    // Initialize new time-related prior components.
    pi.mu0 = zeros(tlen);
-   pi.ls = tlen / (PI * ecross);
+   pi.ls = tlen / (M_PI * ecross);
 
    // If use_fscale=false, then var(f(x,t)) = con_sd^2 / m is variance of Cov matrix.
    // If use_fscale=true, then pi.var = 1/m, and C+ prior is induced with median con_sd via eta.

@@ -10,8 +10,9 @@ vignette: >
 ```{r wkspc, include=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(fig.width=6, fig.height=4) 
-library(tidyverse)
+library(dplyr)
 library(tsbart)
+library(ggplot2)
 library(gridExtra)
 library(data.table)
 ```
@@ -57,7 +58,6 @@ test = sim %>% filter(train=='test')
 # Set up covariates.
 xcols = which(substr(colnames(train),1,1)=="x") # Choose only cols x1, x2, x3, x4.
 xx = train[xcols]; x_pred = test[xcols]         # Set up model matrices.
-
 ```
 
 If we had factor covariates, we can use the utility function makeModelMatrix() to construct our model matrix.  We do not need to do this; the *tsbart()* function does it automatically for us.
@@ -118,7 +118,7 @@ tune here by setting ecross="tune".
 
 ```{r fittsbart, message=FALSE, results="hide", fig.width=10, fig.height=7, cache=TRUE}
 fit = tsbart(y=train$y, tgt=train$ti, tpred=test$ti, x=xx, xpred=x_pred,
-             nburn=250, nsim=500, ntree=200, lambda=lambda, sigq=.9, nu=3, 
+             nburn=500, nsim=1000, ntree=200, lambda=lambda, sigq=.9, nu=3, 
              ecross=exp_cross, base_tree=.95, power_tree=2, 
              probit=F, yobs=NULL, verbose=F)
 ```
@@ -146,7 +146,7 @@ id_sel = c(9,42,60,79,83,91,94,98)
 
 # Plot out-of-sample fit for each curve over time, for combos of covariates x.
 ggplot(ggdf_pred %>% filter(id %in% id_sel)) +
-   geom_line(aes(y = pmean, x = t, colour='pmean'), linetype=1, size=1, stat="identity") +
+   geom_line(aes(y = pmean, x = t, colour='pmean'), linetype=1, linewidth=1, stat="identity") +
    geom_line(aes(y=fx, x=t, colour='fx'), linetype=2, size=1, stat="identity",alpha=.85) +
    geom_ribbon(aes(ymin=lb,ymax=ub, x=t),alpha=0.2) +
    facet_wrap(~id,ncol=4) + 
