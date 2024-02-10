@@ -30,7 +30,7 @@ survPrep = function(df, timevar='t', statusvar='status'){
    #---------------------------------------------------
 
    nreps = df[,paste0(timevar)]
-   surv = setDT(df)
+   surv = data.table::setDT(df)
    surv = surv[rep(1:nrow(surv), nreps),]
 
    #---------------------------------------------------

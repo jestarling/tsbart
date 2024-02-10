@@ -24,7 +24,7 @@ makePredGrid = function(df_new, timevar, timegrid){
    #---------------------------------------------------
 
    nreps = length(timegrid)
-   predgrid = setDT(df_new)
+   predgrid = data.table::setDT(df_new)
    predgrid = predgrid[rep(1:nrow(predgrid), nreps),]
 
    # Add timevar column.

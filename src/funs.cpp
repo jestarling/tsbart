@@ -112,7 +112,7 @@ double lil_ts(vec nt, vec sy_vec, double sy2, double sigma, vec mu0, mat Prec0){
    C.diag() = C.diag() + nt/sig2;
 
    // Calculate log-likelihood.  Note: mu0.t()*K*mu0 excluded as mu0=0.
-   double ll = -.5*nl*log(2*PI*sig2) + .5*log(det(Prec0)) - .5*log(det(C)) -
+   double ll = -.5*nl*log(2*M_PI*sig2) + .5*log(det(Prec0)) - .5*log(det(C)) -
                 .5*as_scalar(sy2/sig2 - b.t()*C.i()*b);
 
    return(ll);
@@ -137,7 +137,7 @@ double lilhet_ts(double n0, double n, vec n_vec, vec sy_vec, double sy2, vec mu0
    vec b = sy_vec + Prec0 * mu0;
 
    // Calculate log-likelihood.  Note: mu0.t()*K*mu0 excluded as cancels in ratios.
-   double ll = - .5*n0*log(2*PI)
+   double ll = - .5*n0*log(2*M_PI)
       + .5*n // This is the .5 * log(det(Lambda)) term, where Lambda=diag(w).
       + .5*log(det(Prec0))
       - .5*log(det(C))
@@ -542,7 +542,7 @@ void drmuhet(tree& t, xinfo& xi, dinfo& di, double* phi, pinfo& pi, RNG& gen)
 double pn(double x, double m, double v)
 {
    double dif = x-m;
-   return exp(-.5*dif*dif/v)/sqrt(2*PI*v);
+   return exp(-.5*dif*dif/v)/sqrt(2*M_PI*v);
 }
 
 //--------------------------------------------------

@@ -14,7 +14,7 @@
 #' This configuration simulates both amplitude change and phase shift for the
 #' underlying function.
 #'
-#' @docType data contained in a csv file with headers
+#' @docType data
 #'
 #' @usage read.csv("sim.csv")
 #'

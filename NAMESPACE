@@ -1,2 +1,3 @@
 useDynLib(tsbart)
 exportPattern("^[[:alpha:]]+")
+importFrom("stats", "lm", "loess", "qchisq", "qnorm", "sd", "sigma")
